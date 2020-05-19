@@ -25,6 +25,11 @@ export default class ModelNavComponent extends ModelComponent {
 		// console.log('ModelNavComponent.onInit');
 	}
 
+	onDestroy() {
+		InteractiveMesh.dispose(this.mesh);
+		super.onDestroy();
+	}
+
 	create(callback) {
 		const geometry = new THREE.PlaneBufferGeometry(2, 2, 2, 2);
 		const map = ModelNavComponent.getTexture();

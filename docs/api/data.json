@@ -395,6 +395,34 @@
         "latitude": -8,
         "longitude": 90
       }
+    },
+    {
+      "id": 10,
+      "type": "panorama",
+      "name": "Live",
+      "likes": 235,
+      "liked": false,
+      "ar": "models/worn_brown_boots.usdz",
+      "envMapFolder": "",
+      "envMapFile": "https://cdn3.wowza.com/1/Sk40c0kwVmx6anBM/SzhjU0Rp/hls/live/playlist.m3u8",
+      "items": [
+        {
+          "id": 101,
+          "type": "nav",
+          "title": "Kitchen 01",
+          "abstract": "Abstract",
+          "position": [
+            0.04713776229380867,
+            -0.16372888464057858,
+            0.9853785484270928
+          ],
+          "navTo": 1
+        }
+      ],
+      "orientation": {
+        "latitude": 0,
+        "longitude": 0
+      }
     }
   ]
 }

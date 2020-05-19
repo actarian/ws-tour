@@ -28,6 +28,15 @@ export default class InteractiveMesh extends EmittableMesh {
 		return hit;
 	}
 
+	static dispose(object) {
+		if (object) {
+			const index = InteractiveMesh.items.indexOf(object);
+			if (index !== -1) {
+				InteractiveMesh.items.splice(index, 1);
+			}
+		}
+	}
+
 	constructor(geometry, material) {
 		super(geometry, material);
 		this.over_ = false;

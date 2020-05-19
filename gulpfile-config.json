@@ -52,6 +52,7 @@
           "input": [
             "node_modules/agora-rtc-sdk/AgoraRTCSDK.min.js",
             "node_modules/agora-rtm-sdk/index.js",
+            "node_modules/hls.js/dist/hls.js",
             "node_modules/rxjs/bundles/rxjs.umd.js",
             "node_modules/rxcomp/dist/iife/rxcomp.js",
             "node_modules/rxcomp-form/dist/iife/rxcomp-form.js",

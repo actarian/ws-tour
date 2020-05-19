@@ -42,12 +42,14 @@ export default class AppComponent extends Component {
 					case MessageType.RequestInfoResult:
 						if (this.controls.view.value !== message.viewId) {
 							this.controls.view.value = message.viewId;
+							console.log('AppComponent.RequestInfoResult', message.viewId);
 						}
 						break;
 					case MessageType.NavToView:
 						if ((agora.state.locked || agora.state.spying) && message.viewId) {
 							if (this.controls.view.value !== message.viewId) {
 								this.controls.view.value = message.viewId;
+								console.log('AppComponent.NavToView', message.viewId);
 							}
 						}
 						break;

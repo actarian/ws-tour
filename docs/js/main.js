@@ -1556,6 +1556,7 @@
             case MessageType.RequestInfoResult:
               if (_this.controls.view.value !== message.viewId) {
                 _this.controls.view.value = message.viewId;
+                console.log('AppComponent.RequestInfoResult', message.viewId);
               }
 
               break;
@@ -1564,6 +1565,7 @@
               if ((agora.state.locked || agora.state.spying) && message.viewId) {
                 if (_this.controls.view.value !== message.viewId) {
                   _this.controls.view.value = message.viewId;
+                  console.log('AppComponent.NavToView', message.viewId);
                 }
               }
 
@@ -56701,6 +56703,16 @@
       return hit;
     };
 
+    InteractiveMesh.dispose = function dispose(object) {
+      if (object) {
+        var index = InteractiveMesh.items.indexOf(object);
+
+        if (index !== -1) {
+          InteractiveMesh.items.splice(index, 1);
+        }
+      }
+    };
+
     function InteractiveMesh(geometry, material) {
       var _this;
 
@@ -57431,6 +57443,8 @@
         return this.loadRgbeBackground(BASE_HREF + environment.paths.textures + item.envMapFolder, item.envMapFile, renderer, callback);
       } else if (item.envMapFile.indexOf('.mp4') !== -1) {
         return this.loadVideoBackground(BASE_HREF + environment.paths.textures + item.envMapFolder, item.envMapFile, renderer, callback);
+      } else if (item.envMapFile.indexOf('.m3u8') !== -1) {
+        return this.loadHlslVideoBackground(item.envMapFile, renderer, callback);
       } else {
         return this.loadBackground(BASE_HREF + environment.paths.textures + item.envMapFolder, item.envMapFile, renderer, callback);
       }
@@ -57493,6 +57507,53 @@
 
         onPlaying();
       };
+    };
+
+    EnvMapLoader.loadHlslVideoBackground = function loadHlslVideoBackground(src, renderer, callback) {
+      var video = document.createElement('video');
+      video.loop = true;
+      video.muted = true;
+      video.playsInline = true;
+      video.crossOrigin = 'anonymous';
+
+      var onPlaying = function onPlaying() {
+        video.oncanplay = null;
+        var texture = new THREE$1.VideoTexture(video);
+        texture.minFilter = THREE$1.LinearFilter;
+        texture.magFilter = THREE$1.LinearFilter;
+        texture.format = THREE$1.RGBFormat;
+        texture.needsUpdate = true; // const envMap = new THREE.VideoTexture(video);
+
+        var cubeRenderTarget = new THREE$1.WebGLCubeRenderTarget(1024, {
+          generateMipmaps: true,
+          // minFilter: THREE.LinearMipmapLinearFilter,
+          minFilter: THREE$1.LinearFilter,
+          magFilter: THREE$1.LinearFilter,
+          format: THREE$1.RGBFormat
+        }).fromEquirectangularTexture(renderer, texture); // texture.dispose();
+
+        if (typeof callback === 'function') {
+          callback(cubeRenderTarget.texture, texture, false);
+        }
+      };
+
+      video.oncanplay = function () {
+
+        onPlaying();
+      };
+
+      if (Hls.isSupported()) {
+        var hls = new Hls(); // bind them together
+
+        hls.attachMedia(video);
+        hls.on(Hls.Events.MEDIA_ATTACHED, function () {
+          hls.loadSource(src);
+          hls.on(Hls.Events.MANIFEST_PARSED, function (event, data) {
+            console.log('HlsDirective', data.levels);
+            video.play();
+          });
+        });
+      }
     };
 
     EnvMapLoader.loadRgbeBackground = function loadRgbeBackground(path, file, renderer, callback) {
@@ -57771,70 +57832,18 @@
       }
 
       var raycaster = this.raycaster = new THREE$1.Raycaster();
-      /*
-      const controls = this.controls = new OrbitControls(camera, renderer.domElement);
-      controls.enablePan = false;
-      controls.enableKeys = false;
-      controls.minDistance = 2;
-      controls.maxDistance = 10;
-      controls.target.set(0, 0, 0);
-      controls.update();
-      */
-
       var scene = this.scene = new THREE$1.Scene();
       var panorama = this.panorama = new Panorama();
       scene.add(panorama.mesh);
       var pointer = this.pointer = this.addPointer();
-      /*
-      const geometry = new THREE.SphereBufferGeometry(3, 48, 24);
-      const material = new THREE.MeshLambertMaterial();
-      const mesh = this.sphere = new THREE.Mesh(geometry, material);
-      mesh.position.set(0, 0, 10);
-      scene.add(mesh);
-      */
-
       var torus = this.torus = this.addTorus();
       var mainLight = new THREE$1.PointLight(0xffffff);
       mainLight.position.set(-50, 0, -50);
       scene.add(mainLight);
-      /*
-      // vr tour!!!
-      const pivot = this.pivot = new Views(scene);
-      pivot.on('onEnterView', (view) => {
-      	if (this.orbit) {
-      		this.orbit.setOrientation(view.orientation);
-      	}
-      });
-      pivot.on('pointDown', (point) => {
-      	const position = point.position;
-      	const debugInfo = `down => {${position.x}, ${position.y}, ${position.z}}`;
-      	this.debugInfo.innerHTML = debugInfo;
-      });
-      */
-
       var objects = this.objects = new THREE$1.Group();
       scene.add(objects);
       var light = new THREE$1.AmbientLight(0x404040);
       scene.add(light);
-      /*
-      // background
-      var options = {
-      	generateMipmaps: true,
-      	minFilter: THREE.LinearMipmapLinearFilter,
-      	magFilter: THREE.LinearFilter
-      };
-      scene.background = new THREE.WebGLCubeRenderTarget( 1024, options ).fromEquirectangularTexture( renderer, texture );
-      //
-      cubeCamera1 = new THREE.CubeCamera( 1, 1000, 256 );
-      cubeCamera1.renderTarget.texture.generateMipmaps = true;
-      cubeCamera1.renderTarget.texture.minFilter = THREE.LinearMipmapLinearFilter;
-      scene.add( cubeCamera1 );
-      cubeCamera2 = new THREE.CubeCamera( 1, 1000, 256 );
-      cubeCamera2.renderTarget.texture.generateMipmaps = true;
-      cubeCamera2.renderTarget.texture.minFilter = THREE.LinearMipmapLinearFilter;
-      scene.add( cubeCamera2 );
-      */
-
       this.onSelect1Start = this.onSelect1Start.bind(this);
       this.onSelect1End = this.onSelect1End.bind(this);
       this.onSelect2Start = this.onSelect2Start.bind(this);
@@ -57883,8 +57892,8 @@
       if (view) {
         if (this.orbit) {
           if (this.infoResultMessage) {
-            this.infoResultMessage = null;
             this.orbit.setOrientation(this.infoResultMessage.orientation);
+            this.infoResultMessage = null;
           } else {
             this.orbit.setOrientation(view.orientation);
           }
@@ -58029,7 +58038,7 @@
     		if ( count === room.children.length ) count = 0;
     	}
     }
-    		*/
+    */
     ;
 
     _proto.onNavOver = function onNavOver(event) {
@@ -58104,8 +58113,8 @@
               if (this.panorama.mesh.intersection) {
                 var pointer = this.pointer;
                 var position = this.panorama.mesh.intersection.point.normalize().multiplyScalar(POINTER_RADIUS);
-                this.pointer.position.set(position.x, position.y, position.z);
-                this.pointer.lookAt(ORIGIN);
+                pointer.position.set(position.x, position.y, position.z);
+                pointer.lookAt(ORIGIN);
               }
               /*
               if (hit && hit !== this.panorama.mesh) {
@@ -58130,6 +58139,7 @@
         }
       } catch (error) {
         this.error = error;
+        throw error;
       }
     };
 
@@ -58174,6 +58184,7 @@
         renderer.render(this.scene, this.camera);
       } catch (error) {
         this.error = error;
+        throw error;
       }
     };
 
@@ -58466,6 +58477,7 @@
 
     _proto.onDestroy = function onDestroy() {
       this.host.objects.remove(this.group);
+      delete this.group.userData.render;
       this.group = null;
     };
 
@@ -58738,6 +58750,12 @@
     _proto.onInit = function onInit() {
       _ModelComponent.prototype.onInit.call(this); // console.log('ModelNavComponent.onInit');
 
+    };
+
+    _proto.onDestroy = function onDestroy() {
+      InteractiveMesh.dispose(this.mesh);
+
+      _ModelComponent.prototype.onDestroy.call(this);
     };
 
     _proto.create = function create(callback) {

@@ -31,6 +31,7 @@ export default class ModelComponent extends Component {
 
 	onDestroy() {
 		this.host.objects.remove(this.group);
+		delete this.group.userData.render;
 		this.group = null;
 	}
 

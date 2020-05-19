@@ -104,16 +104,6 @@ export default class WorldComponent extends Component {
 
 		const raycaster = this.raycaster = new THREE.Raycaster();
 
-		/*
-		const controls = this.controls = new OrbitControls(camera, renderer.domElement);
-		controls.enablePan = false;
-		controls.enableKeys = false;
-		controls.minDistance = 2;
-		controls.maxDistance = 10;
-		controls.target.set(0, 0, 0);
-		controls.update();
-		*/
-
 		const scene = this.scene = new THREE.Scene();
 
 		const panorama = this.panorama = new Panorama();
@@ -121,59 +111,17 @@ export default class WorldComponent extends Component {
 
 		const pointer = this.pointer = this.addPointer();
 
-		/*
-		const geometry = new THREE.SphereBufferGeometry(3, 48, 24);
-		const material = new THREE.MeshLambertMaterial();
-		const mesh = this.sphere = new THREE.Mesh(geometry, material);
-		mesh.position.set(0, 0, 10);
-		scene.add(mesh);
-		*/
-
 		const torus = this.torus = this.addTorus();
 
 		var mainLight = new THREE.PointLight(0xffffff);
 		mainLight.position.set(-50, 0, -50);
 		scene.add(mainLight);
 
-		/*
-		// vr tour!!!
-		const pivot = this.pivot = new Views(scene);
-		pivot.on('onEnterView', (view) => {
-			if (this.orbit) {
-				this.orbit.setOrientation(view.orientation);
-			}
-		});
-		pivot.on('pointDown', (point) => {
-			const position = point.position;
-			const debugInfo = `down => {${position.x}, ${position.y}, ${position.z}}`;
-			this.debugInfo.innerHTML = debugInfo;
-		});
-		*/
-
 		const objects = this.objects = new THREE.Group();
 		scene.add(objects);
 
 		const light = new THREE.AmbientLight(0x404040);
 		scene.add(light);
-
-		/*
-		// background
-		var options = {
-			generateMipmaps: true,
-			minFilter: THREE.LinearMipmapLinearFilter,
-			magFilter: THREE.LinearFilter
-		};
-		scene.background = new THREE.WebGLCubeRenderTarget( 1024, options ).fromEquirectangularTexture( renderer, texture );
-		//
-		cubeCamera1 = new THREE.CubeCamera( 1, 1000, 256 );
-		cubeCamera1.renderTarget.texture.generateMipmaps = true;
-		cubeCamera1.renderTarget.texture.minFilter = THREE.LinearMipmapLinearFilter;
-		scene.add( cubeCamera1 );
-		cubeCamera2 = new THREE.CubeCamera( 1, 1000, 256 );
-		cubeCamera2.renderTarget.texture.generateMipmaps = true;
-		cubeCamera2.renderTarget.texture.minFilter = THREE.LinearMipmapLinearFilter;
-		scene.add( cubeCamera2 );
-		*/
 
 		this.onSelect1Start = this.onSelect1Start.bind(this);
 		this.onSelect1End = this.onSelect1End.bind(this);
@@ -213,7 +161,6 @@ export default class WorldComponent extends Component {
 		controllerGrip2.add(controllerModelFactory.createControllerModel(controllerGrip2));
 		scene.add(controllerGrip2);
 		//
-
 		this.resize();
 	}
 
@@ -222,8 +169,8 @@ export default class WorldComponent extends Component {
 		if (view) {
 			if (this.orbit) {
 				if (this.infoResultMessage) {
-					this.infoResultMessage = null;
 					this.orbit.setOrientation(this.infoResultMessage.orientation);
+					this.infoResultMessage = null;
 				} else {
 					this.orbit.setOrientation(view.orientation);
 				}
@@ -353,7 +300,7 @@ export default class WorldComponent extends Component {
 			if ( count === room.children.length ) count = 0;
 		}
 	}
-			*/
+	*/
 
 	onNavOver(event) {
 		// console.log('WorldComponent.onNavOver', event);
@@ -426,8 +373,8 @@ export default class WorldComponent extends Component {
 						if (this.panorama.mesh.intersection) {
 							const pointer = this.pointer;
 							const position = this.panorama.mesh.intersection.point.normalize().multiplyScalar(POINTER_RADIUS);
-							this.pointer.position.set(position.x, position.y, position.z);
-							this.pointer.lookAt(ORIGIN);
+							pointer.position.set(position.x, position.y, position.z);
+							pointer.lookAt(ORIGIN);
 						}
 						/*
 						if (hit && hit !== this.panorama.mesh) {
@@ -449,6 +396,7 @@ export default class WorldComponent extends Component {
 			}
 		} catch (error) {
 			this.error = error;
+			throw (error);
 		}
 	}
 
@@ -493,6 +441,7 @@ export default class WorldComponent extends Component {
 			renderer.render(this.scene, this.camera);
 		} catch (error) {
 			this.error = error;
+			throw (error);
 		}
 	}
 

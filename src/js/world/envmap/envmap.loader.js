@@ -10,6 +10,8 @@ export class EnvMapLoader {
 			return this.loadRgbeBackground(BASE_HREF + environment.paths.textures + item.envMapFolder, item.envMapFile, renderer, callback);
 		} else if (item.envMapFile.indexOf('.mp4') !== -1) {
 			return this.loadVideoBackground(BASE_HREF + environment.paths.textures + item.envMapFolder, item.envMapFile, renderer, callback);
+		} else if (item.envMapFile.indexOf('.m3u8') !== -1) {
+			return this.loadHlslVideoBackground(item.envMapFile, renderer, callback);
 		} else {
 			return this.loadBackground(BASE_HREF + environment.paths.textures + item.envMapFolder, item.envMapFile, renderer, callback);
 		}
@@ -71,6 +73,52 @@ export class EnvMapLoader {
 			// console.log('videoReady', videoReady);
 			onPlaying();
 		};
+	}
+
+	static loadHlslVideoBackground(src, renderer, callback) {
+		const video = document.createElement('video');
+		video.loop = true;
+		video.muted = true;
+		video.playsInline = true;
+		video.crossOrigin = 'anonymous';
+		const onPlaying = () => {
+			video.oncanplay = null;
+			const texture = new THREE.VideoTexture(video);
+			texture.minFilter = THREE.LinearFilter;
+			texture.magFilter = THREE.LinearFilter;
+			texture.format = THREE.RGBFormat;
+			texture.needsUpdate = true;
+			// const envMap = new THREE.VideoTexture(video);
+			const cubeRenderTarget = new THREE.WebGLCubeRenderTarget(1024, {
+				generateMipmaps: true,
+				// minFilter: THREE.LinearMipmapLinearFilter,
+				minFilter: THREE.LinearFilter,
+				magFilter: THREE.LinearFilter,
+				format: THREE.RGBFormat
+			}).fromEquirectangularTexture(renderer, texture);
+			// texture.dispose();
+			if (typeof callback === 'function') {
+				callback(cubeRenderTarget.texture, texture, false);
+			}
+		};
+		let videoReady = false;
+		video.oncanplay = () => {
+			videoReady = true;
+			// console.log('videoReady', videoReady);
+			onPlaying();
+		};
+		if (Hls.isSupported()) {
+			var hls = new Hls();
+			// bind them together
+			hls.attachMedia(video);
+			hls.on(Hls.Events.MEDIA_ATTACHED, () => {
+				hls.loadSource(src);
+				hls.on(Hls.Events.MANIFEST_PARSED, (event, data) => {
+					console.log('HlsDirective', data.levels);
+					video.play();
+				});
+			});
+		}
 	}
 
 	static loadRgbeBackground(path, file, renderer, callback) {
