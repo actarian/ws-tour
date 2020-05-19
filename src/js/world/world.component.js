@@ -1,7 +1,6 @@
 import { Component, getContext } from 'rxcomp';
 import { takeUntil, tap } from 'rxjs/operators';
 import * as THREE from 'three';
-import { Vector2 } from 'three';
 import { XRControllerModelFactory } from 'three/examples/jsm/webxr/XRControllerModelFactory.js';
 import { environment } from '../../environment/environment';
 // import { VRButton } from 'three/examples/jsm/webxr/VRButton.js';
@@ -65,7 +64,8 @@ export default class WorldComponent extends Component {
 	createScene() {
 		const { node } = getContext(this);
 		this.size = { width: 0, height: 0, aspect: 0 };
-		this.mouse = new Vector2();
+		this.mouse = new THREE.Vector2();
+		this.direction = new THREE.Vector3();
 
 		const container = this.container = node;
 		const info = this.info = node.querySelector('.world__info');
@@ -175,9 +175,14 @@ export default class WorldComponent extends Component {
 		scene.add( cubeCamera2 );
 		*/
 
+		this.onSelect1Start = this.onSelect1Start.bind(this);
+		this.onSelect1End = this.onSelect1End.bind(this);
+		this.onSelect2Start = this.onSelect2Start.bind(this);
+		this.onSelect2End = this.onSelect2End.bind(this);
+
 		const controller1 = this.controller1 = renderer.xr.getController(0);
-		controller1.addEventListener('selectstart', this.onSelectStart);
-		controller1.addEventListener('selectend', this.onSelectEnd);
+		controller1.addEventListener('selectstart', this.onSelect1Start);
+		controller1.addEventListener('selectend', this.onSelect1End);
 		controller1.addEventListener('connected', (event) => {
 			controller1.add(this.buildController(event.data));
 		});
@@ -186,8 +191,8 @@ export default class WorldComponent extends Component {
 		});
 		scene.add(controller1);
 		const controller2 = this.controller2 = renderer.xr.getController(1);
-		controller2.addEventListener('selectstart', this.onSelectStart);
-		controller2.addEventListener('selectend', this.onSelectEnd);
+		controller2.addEventListener('selectstart', this.onSelect2Start);
+		controller2.addEventListener('selectend', this.onSelect2End);
 		controller2.addEventListener('connected', (event) => {
 			controller2.add(this.buildController(event.data));
 		});
@@ -195,6 +200,7 @@ export default class WorldComponent extends Component {
 			controller2.remove(controller2.children[0]);
 		});
 		scene.add(controller2);
+		this.controllers = [this.controller1, this.controller2];
 		// The XRControllerModelFactory will automatically fetch controller models
 		// that match what the user is holding as closely as possible. The models
 		// should be attached to the object returned from getControllerGrip in
@@ -252,22 +258,13 @@ export default class WorldComponent extends Component {
 		const mesh = new THREE.Mesh(geometry, material);
 		mesh.renderOrder = 1000;
 		mesh.position.set(-100000, -100000, -100000);
-		this.scene.add(mesh);
-		const sphere = this.panorama.mesh;
-		sphere.on('hit', (sphere) => {
-			const intersection = sphere.intersection;
-			let position = intersection.point.normalize().multiplyScalar(POINTER_RADIUS);
-			// position = this.scene.worldToLocal(position);
-			mesh.position.set(position.x, position.y, position.z);
-			mesh.lookAt(ORIGIN);
-			// mesh.scale.setScalar(pivot.busy ? 0 : 1);
-		});
-		sphere.on('down', (sphere) => {
+		const panorama = this.panorama.mesh;
+		panorama.on('down', (panorama) => {
 			mesh.material.color.setHex(0x0000ff);
 			mesh.material.opacity = 1.0;
 			mesh.material.needsUpdate = true;
 		});
-		sphere.on('up', (sphere) => {
+		panorama.on('up', (panorama) => {
 			mesh.material.color.setHex(0xffffff);
 			mesh.material.opacity = 0.9;
 			mesh.material.needsUpdate = true;
@@ -313,12 +310,19 @@ export default class WorldComponent extends Component {
 		return mesh;
 	}
 
-	onSelectStart() {
-		this.userData.isSelecting = true;
+	onSelect1Start() {
+		this.controller1.userData.isSelecting = true;
+		this.controller = this.controller1;
 	}
-
-	onSelectEnd() {
-		this.userData.isSelecting = false;
+	onSelect1End() {
+		this.controller1.userData.isSelecting = false;
+	}
+	onSelect2Start() {
+		this.controller2.userData.isSelecting = true;
+		this.controller = this.controller2;
+	}
+	onSelect2End() {
+		this.controller2.userData.isSelecting = false;
 	}
 
 	buildController(data) {
@@ -336,10 +340,10 @@ export default class WorldComponent extends Component {
 		}
 	}
 
+	/*
 	handleController(controller) {
 		if (controller.userData.isSelecting) {
 			console.log(controller);
-			/*
 			var object = room.children[ count ++ ];
 			object.position.copy( controller.position );
 			object.userData.velocity.x = ( Math.random() - 0.5 ) * 3;
@@ -347,24 +351,24 @@ export default class WorldComponent extends Component {
 			object.userData.velocity.z = ( Math.random() - 9 );
 			object.userData.velocity.applyQuaternion( controller.quaternion );
 			if ( count === room.children.length ) count = 0;
-			*/
 		}
 	}
+			*/
 
 	onNavOver(event) {
-		console.log('WorldComponent.onNavOver', event);
+		// console.log('WorldComponent.onNavOver', event);
 		event.showPanel = true;
 		this.pushChanges();
 	}
 
 	onNavOut(event) {
-		console.log('WorldComponent.onNavOut', event);
+		// console.log('WorldComponent.onNavOut', event);
 		event.showPanel = false;
 		this.pushChanges();
 	}
 
 	onNavDown(event) {
-		console.log('WorldComponent.onNavDown', event);
+		// console.log('WorldComponent.onNavDown', event);
 		event.showPanel = false;
 		this.navTo.next(event.navTo);
 	}
@@ -402,39 +406,45 @@ export default class WorldComponent extends Component {
 		this.slideChange.next(index);
 	}
 
+	setRaycaster(controller, raycaster) {
+		if (controller) {
+			const position = controller.position;
+			const rotation = controller.getWorldDirection(this.direction).multiplyScalar(-1);
+			raycaster.set(position, rotation);
+			return raycaster;
+		}
+	}
+
 	updateRaycaster() {
 		try {
 			if (this.renderer.xr.isPresenting) {
-				/*
-			const controllers = this.controllers;
-			if (controllers) {
-				const raycaster = controllers.setRaycaster(this.raycaster);
-				if (raycaster) {
-					const hit = InteractiveMesh.hittest(raycaster, controllers.gamepads.button);
-					if (hit && hit !== this.pivot.room.sphere) {
-						controllers.feedback();
-						// if (Tone.context.state === 'running') {
-						// 	const feedback = this.feedback = (this.feedback || new Tone.Player('audio/feedback.mp3').toMaster());
-						// 	feedback.start();
-						// }
+				const controller = this.controller;
+				if (controller) {
+					const raycaster = this.setRaycaster(controller, this.raycaster);
+					if (raycaster) {
+						const hit = InteractiveMesh.hittest(raycaster, controller.userData.isSelecting);
+						if (this.panorama.mesh.intersection) {
+							const pointer = this.pointer;
+							const position = this.panorama.mesh.intersection.point.normalize().multiplyScalar(POINTER_RADIUS);
+							this.pointer.position.set(position.x, position.y, position.z);
+							this.pointer.lookAt(ORIGIN);
+						}
+						/*
+						if (hit && hit !== this.panorama.mesh) {
+							// controllers.feedback();
+						}
+						*/
 					}
-					// this.updatePointer(raycaster);
 				}
-			}
-				*/
 			} else {
 				const raycaster = this.raycaster;
 				if (raycaster) {
 					const hit = InteractiveMesh.hittest(this.raycaster);
+					/*
 					if (hit && hit !== this.panorama.mesh) {
 						console.log('hit', hit);
-						// controllers.feedback();
-						// if (Tone.context.state === 'running') {
-						// 	const feedback = this.feedback = (this.feedback || new Tone.Player('audio/feedback.mp3').toMaster());
-						// 	feedback.start();
-						// }
 					}
-					// this.updatePointer(raycaster);
+					*/
 				}
 			}
 		} catch (error) {
@@ -462,6 +472,7 @@ export default class WorldComponent extends Component {
 		try {
 			const time = performance.now();
 			const tick = this.tick_ ? ++this.tick_ : this.tick_ = 1;
+			this.updateRaycaster();
 			this.scene.traverse((child) => {
 				if (typeof child.userData.render === 'function') {
 					child.userData.render(time, tick);
@@ -476,9 +487,6 @@ export default class WorldComponent extends Component {
 				}
 			}
 			*/
-			this.handleController(this.controller1);
-			this.handleController(this.controller2);
-			this.updateRaycaster();
 			const renderer = this.renderer,
 				scene = this.scene,
 				camera = this.camera;
@@ -550,19 +558,9 @@ export default class WorldComponent extends Component {
 			const raycaster = this.raycaster;
 			raycaster.setFromCamera(this.mouse, this.camera);
 			const hit = InteractiveMesh.hittest(raycaster, true);
-			if (hit) {
-				if (hit === this.panorama.mesh) {
-					if (DEBUG) {
-						const position = new THREE.Vector3().copy(hit.intersection.point).normalize();
-						console.log(JSON.stringify({ position: position.toArray() }));
-					}
-				} else {
-					// controllers.feedback();
-					// if (Tone.context.state === 'running') {
-					// 	const feedback = this.feedback = (this.feedback || new Tone.Player('audio/feedback.mp3').toMaster());
-					// 	feedback.start();
-					// }
-				}
+			if (DEBUG && this.panorama.mesh.intersection) {
+				const position = new THREE.Vector3().copy(this.panorama.mesh.intersection.point).normalize();
+				console.log(JSON.stringify({ position: position.toArray() }));
 			}
 		} catch (error) {
 			this.error = error;
@@ -627,7 +625,14 @@ export default class WorldComponent extends Component {
 		const vrService = this.vrService = VRService.getService();
 		vrService.session$.pipe(
 			takeUntil(this.unsubscribe$),
-		).subscribe(session => this.renderer.xr.setSession(session));
+		).subscribe((session) => {
+			this.renderer.xr.setSession(session);
+			if (session) {
+				this.scene.add(this.pointer);
+			} else {
+				this.scene.remove(this.pointer);
+			}
+		});
 
 		this.orbit.observe$().pipe(
 			takeUntil(this.unsubscribe$),

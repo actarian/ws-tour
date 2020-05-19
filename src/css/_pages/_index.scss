@@ -468,10 +468,18 @@ body {
 	text-shadow: 0 10px 10px rgba(0, 0, 0, 0.5);
 }
 
-@include media-up(md) {
+@include media-up(sm) {
 	.ui__foot {
 		.btn--vr {
 			margin-left: 10px;
+		}
+	}
+}
+
+@include media-down(xs) {
+	.ui__foot {
+		.btn--vr {
+			display: none;
 		}
 	}
 }

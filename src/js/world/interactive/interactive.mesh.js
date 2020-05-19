@@ -13,18 +13,17 @@ export default class InteractiveMesh extends EmittableMesh {
 		intersections.forEach((intersection, i) => {
 			const object = intersection.object;
 			key = object.uuid;
-			if (i === 0 && (InteractiveMesh.object != object || object.down !== down)) {
-				InteractiveMesh.object = object;
+			if (i === 0 && InteractiveMesh.lastIntersectedObject !== object) {
+				InteractiveMesh.lastIntersectedObject = object;
 				hit = object;
 				// haptic feedback
 			}
 			hash[key] = intersection;
 		});
 		items.forEach(x => {
-			const intersection = hash[x.uuid]; // intersections.find(i => i.object === x);
-			x.intersection = intersection;
-			x.over = intersection !== undefined;
-			x.down = intersection !== undefined && down;
+			x.intersection = hash[x.uuid];
+			x.over = x === InteractiveMesh.lastIntersectedObject;
+			x.down = down && x.over;
 		});
 		return hit;
 	}

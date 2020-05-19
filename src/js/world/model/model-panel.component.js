@@ -58,27 +58,33 @@ export default class ModelPanelComponent extends ModelComponent {
 
 	getCanvasTexture() {
 		return new Promise((resolve, reject) => {
-			setTimeout(() => {
-				const { node } = getContext(this);
-				html2canvas(node, {
-					backgroundColor: '#ffffff00',
-				}).then(canvas => {
-					// !!!
-					// document.body.appendChild(canvas);
-					// const alpha = this.getAlphaFromCanvas(canvas);
-					// document.body.appendChild(alpha);
-					const map = new THREE.CanvasTexture(canvas);
-					// const alphaMap = new THREE.CanvasTexture(alpha);
-					resolve({
-						map: map,
-						// alphaMap: alphaMap,
-						width: canvas.width,
-						height: canvas.height,
+			if (this.item.panelTexture) {
+				resolve(this.item.panelTexture);
+			} else {
+				setTimeout(() => {
+					const { node } = getContext(this);
+					html2canvas(node, {
+						backgroundColor: '#ffffff00',
+						scale: 2,
+					}).then(canvas => {
+						// !!!
+						// document.body.appendChild(canvas);
+						// const alpha = this.getAlphaFromCanvas(canvas);
+						// document.body.appendChild(alpha);
+						const map = new THREE.CanvasTexture(canvas);
+						// const alphaMap = new THREE.CanvasTexture(alpha);
+						this.item.panelTexture = {
+							map: map,
+							// alphaMap: alphaMap,
+							width: canvas.width,
+							height: canvas.height,
+						};
+						resolve(this.item.panelTexture);
+					}, error => {
+						reject(error);
 					});
-				}, error => {
-					reject(error);
-				});
-			}, 1);
+				}, 1);
+			}
 		});
 	}
 

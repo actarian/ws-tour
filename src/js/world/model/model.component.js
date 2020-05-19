@@ -53,7 +53,7 @@ export default class ModelComponent extends Component {
 	loaded(mesh) {
 		this.mesh = mesh;
 		this.group.add(mesh);
-		this.host.render();
+		// this.host.render(); !!!
 		/*
 		const node = this.node;
 		DomService.scrollIntersection$(node).subscribe(event => {
