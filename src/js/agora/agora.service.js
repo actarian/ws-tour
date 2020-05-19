@@ -149,7 +149,7 @@ export default class AgoraService extends Emittable {
 			control: false,
 			cameraMuted: false,
 			audioMuted: false,
-			devices: role !== RoleType.Attendee ? defaultDevices : { videos: [], audios: [] },
+			devices: (role !== RoleType.Attendee && defaultDevices) ? defaultDevices : { videos: [], audios: [] },
 			mediaStatus: MediaStatus.Waiting,
 			quality: StreamQualities[StreamQualities.length - 1],
 		};

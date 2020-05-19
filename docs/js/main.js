@@ -425,7 +425,7 @@
         control: false,
         cameraMuted: false,
         audioMuted: false,
-        devices: role !== RoleType.Attendee ? defaultDevices : {
+        devices: role !== RoleType.Attendee && defaultDevices ? defaultDevices : {
           videos: [],
           audios: []
         },
