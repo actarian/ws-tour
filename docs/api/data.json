@@ -1,0 +1,228 @@
+{
+  "views": [
+    {
+      "id": 1,
+      "type": "panorama",
+      "name": "Kitchen 01",
+      "likes": 40,
+      "liked": false,
+      "ar": "models/worn_brown_boots.usdz",
+      "envMapFolder": "rendering/",
+      "envMapFile": "Kitchen-1.jpg",
+      "items": [
+        {
+          "id": 11,
+          "type": "nav",
+          "title": "Kitchen 02",
+          "abstract": "Abstract",
+          "position": [
+            -124.29046901090334,
+            -112.9935452521287,
+            470.109251736104
+          ],
+          "navTo": 2
+        }
+      ],
+      "orientation": {
+        "latitude": -4.1,
+        "longitude": 88
+      }
+    },
+    {
+      "id": 2,
+      "type": "panorama",
+      "name": "Kitchen 02",
+      "likes": 190,
+      "liked": false,
+      "ar": "models/worn_brown_boots.usdz",
+      "envMapFolder": "rendering/",
+      "envMapFile": "Kitchen-2.jpg",
+      "items": [
+        {
+          "id": 21,
+          "type": "nav",
+          "title": "Kitchen 03",
+          "abstract": "Abstract",
+          "position": [
+            -124.29046901090334,
+            -112.9935452521287,
+            470.109251736104
+          ],
+          "navTo": 3
+        }
+      ],
+      "orientation": {
+        "latitude": -4.1,
+        "longitude": 88
+      }
+    },
+    {
+      "id": 3,
+      "type": "panorama",
+      "name": "Kitchen 03",
+      "likes": 165,
+      "liked": false,
+      "ar": "models/worn_brown_boots.usdz",
+      "envMapFolder": "rendering/",
+      "envMapFile": "Kitchen-3.jpg",
+      "items": [
+        {
+          "id": 31,
+          "type": "nav",
+          "title": "Mostra 01",
+          "abstract": "Abstract",
+          "position": [
+            -124.29046901090334,
+            -112.9935452521287,
+            470.109251736104
+          ],
+          "navTo": 4
+        }
+      ],
+      "orientation": {
+        "latitude": -4.1,
+        "longitude": 88
+      }
+    },
+    {
+      "id": 4,
+      "type": "panorama",
+      "name": "Kitchen 04",
+      "likes": 143,
+      "liked": false,
+      "ar": "models/worn_brown_boots.usdz",
+      "envMapFolder": "rendering/",
+      "envMapFile": "Kitchen-4.jpg",
+      "items": [
+        {
+          "id": 41,
+          "type": "nav",
+          "title": "Mostra 01",
+          "abstract": "Abstract",
+          "position": [
+            -124.29046901090334,
+            -112.9935452521287,
+            470.109251736104
+          ],
+          "navTo": 5
+        }
+      ],
+      "orientation": {
+        "latitude": -4.1,
+        "longitude": 88
+      }
+    },
+    {
+      "id": 5,
+      "type": "panorama",
+      "name": "Mostra 01",
+      "likes": 156,
+      "liked": false,
+      "ar": "models/worn_brown_boots.usdz",
+      "envMapFolder": "panorama-sm/",
+      "envMapFile": "panorama-01.jpg",
+      "items": [
+        {
+          "id": 51,
+          "type": "nav",
+          "title": "Mostra 02",
+          "abstract": "Abstract",
+          "position": [
+            -124.29046901090334,
+            -112.9935452521287,
+            470.109251736104
+          ],
+          "navTo": 6
+        }
+      ],
+      "orientation": {
+        "latitude": -4.1,
+        "longitude": 88
+      }
+    },
+    {
+      "id": 6,
+      "type": "panorama",
+      "name": "Mostra 02",
+      "likes": 134,
+      "liked": false,
+      "ar": "models/worn_brown_boots.usdz",
+      "envMapFolder": "panorama-sm/",
+      "envMapFile": "panorama-02.jpg",
+      "items": [
+        {
+          "id": 61,
+          "type": "nav",
+          "title": "Square",
+          "abstract": "Abstract",
+          "position": [
+            -265.3058462058933,
+            -160.4825267081394,
+            391.30946337019196
+          ],
+          "navTo": 7
+        }
+      ],
+      "orientation": {
+        "latitude": -8,
+        "longitude": 90
+      }
+    },
+    {
+      "id": 7,
+      "type": "panorama",
+      "name": "Square",
+      "likes": 175,
+      "liked": false,
+      "ar": "models/worn_brown_boots.usdz",
+      "envMapFolder": "video/",
+      "envMapFile": "Square.mp4",
+      "items": [
+        {
+          "id": 71,
+          "type": "nav",
+          "title": "Garden",
+          "abstract": "Abstract",
+          "position": [
+            -265.3058462058933,
+            -160.4825267081394,
+            391.30946337019196
+          ],
+          "navTo": 8
+        }
+      ],
+      "orientation": {
+        "latitude": -8,
+        "longitude": 90
+      }
+    },
+    {
+      "id": 8,
+      "type": "panorama",
+      "name": "Garden",
+      "likes": 235,
+      "liked": false,
+      "ar": "models/worn_brown_boots.usdz",
+      "envMapFolder": "video/",
+      "envMapFile": "Garden.mp4",
+      "items": [
+        {
+          "id": 81,
+          "type": "nav",
+          "title": "Kitchen 01",
+          "abstract": "Abstract",
+          "position": [
+            -265.3058462058933,
+            -160.4825267081394,
+            391.30946337019196
+          ],
+          "navTo": 1
+        }
+      ],
+      "orientation": {
+        "latitude": -8,
+        "longitude": 90
+      }
+    }
+  ]
+}

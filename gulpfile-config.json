@@ -1,0 +1,90 @@
+﻿{
+  "targets": {
+    "browser": {
+      "compile": [
+        {
+          "input": "src/*.html",
+          "output": "docs/",
+          "minify": true
+        },
+        {
+          "input": "src/css/main.scss",
+          "output": "docs/css/main.css",
+          "minify": true
+        },
+        {
+          "input": "src/js/main.server.js",
+          "output": {
+            "file": "dist/server/main.js",
+            "format": "cjs"
+          },
+          "minify": false
+        },
+        {
+          "input": "src/js/main.js",
+          "output": {
+            "file": "docs/js/main.js",
+            "format": "umd"
+          },
+          "globals": {
+            "agora-rtm-sdk": "AgoraRTM",
+            "gsap": "gsap",
+            "rxjs": "rxjs",
+            "rxjs/operators": "rxjs.operators",
+            "rxcomp": "rxcomp",
+            "rxcomp-form": "rxcomp.form",
+            "three": "THREE",
+            "html2canvas": "html2canvas"
+          },
+          "minify": true
+        },
+        {
+          "input": "src/js/image/image.service.worker.js",
+          "output": {
+            "file": "docs/js/workers/image.service.worker.js",
+            "format": "umd"
+          },
+          "minify": true
+        }
+      ],
+      "bundle": [
+        {
+          "input": [
+            "node_modules/agora-rtc-sdk/AgoraRTCSDK.min.js",
+            "node_modules/agora-rtm-sdk/index.js",
+            "node_modules/rxjs/bundles/rxjs.umd.js",
+            "node_modules/rxcomp/dist/iife/rxcomp.js",
+            "node_modules/rxcomp-form/dist/iife/rxcomp-form.js",
+            "node_modules/gsap/dist/EasePack.js",
+            "node_modules/gsap/dist/gsap.js",
+            "node_modules/three/build/three.js",
+            "node_modules/qrious/dist/qrious.js",
+            "node_modules/html2canvas/dist/html2canvas.js"
+          ],
+          "output": "docs/js/vendors.js",
+          "minify": true
+        }
+      ]
+    },
+    "dist": {
+      "compile": [
+        {
+          "input": "src/js/main.server.js",
+          "output": {
+            "file": "dist/server/main.js",
+            "format": "cjs"
+          },
+          "minify": false
+        }
+      ]
+    }
+  },
+  "tfs": false,
+  "server": {
+    "root": "./docs",
+    "path": "/ws-tour/",
+    "host": "0.0.0.0",
+    "port": 41789,
+    "log": false
+  }
+}

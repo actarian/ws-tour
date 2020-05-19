@@ -1,0 +1,88 @@
+<!-- @@master = ./templates/layout.html { "baseHref": "/ws-tour/" } -->
+
+<!-- @@block = main-->
+
+<div class="ui" *if="!state.connected">
+	<div class="group--info">
+		<div class="info" *if="state.mediaStatus === 'waiting'">ricerca camera e microfono...</div>
+		<div class="info" *if="state.mediaStatus === 'ready'">camera e microfono connessi</div>
+		<div class="info" *if="state.mediaStatus === 'unavailable'">camera o microfono non disponibili</div>
+		<button type="button" class="btn--connect" [class]="{ disabled: state.mediaStatus !== 'ready' }" (click)="state.mediaStatus === 'ready' && connect()">
+			<svg width="24" height="24" viewBox="0 0 24 24"><use xlink:href="#call"></use></svg>
+			<span *if="!state.connecting">Entra</span>
+			<span *if="state.connecting">In connessione...</span>
+		</button>
+	</div>
+</div>
+
+<div class="ui" *if="state.connected">
+
+	<div class="ui__head">
+		<div class="group--remote">
+			<div class="video video--remote" [class]="{ disabled: !state.remote }"></div>
+		</div>
+		<div class="group--select" *if="form">
+			<form class="form" [formGroup]="form" (submit)="onSubmit()" name="form" role="form" novalidate autocomplete="off">
+				<div control-custom-select [control]="controls.view" label="Vista"></div>
+			</form>
+		</div>
+		<div class="group--local" [class]="{ publisher: state.role == 'publisher' }">
+			<button type="button" class="btn--control" [class]="{ active: state.control }" (click)="toggleControl($event)" *if="state.role == 'publisher'">
+				<svg width="24" height="24" viewBox="0 0 24 24"><use xlink:href="#gamepad"></use></svg>
+			</button>
+			<div class="video video--local" [class]="{ disabled: !state.local }"></div>
+		</div>
+	</div>
+
+	<div class="ui__body">
+		<div class="world" world [view]="view" (rotate)="onRotate($event)" (change)="onChange($event)" (navTo)="onNavTo($event)">
+			<div class="world__view" *if="view">
+				<div class="world__item" *for="let item of view.items; let index = index;">
+					<div model-nav [item]="item" (over)="onNavOver($event)" (out)="onNavOut($event)" (down)="onNavDown($event)" *if="item.type == 'nav'"></div>
+					<div class="panel" model-panel [item]="item" *if="item.showPanel">
+						<div class="panel__title" [innerHTML]="item.title"></div>
+						<div class="panel__abstract" [innerHTML]="item.abstract"></div>
+					</div>
+				</div>
+			</div>
+			<div class="world__info" *if="error" [innerHTML]="error"></div>
+		</div>
+	</div>
+
+	<div class="ui__foot">
+		<div class="left">
+			<div class="group--controls">
+				<button type="button" class="btn--call" (click)="disconnect()">
+					<svg width="24" height="24" viewBox="0 0 24 24"><use xlink:href="#call"></use></svg>
+				</button>
+				<button type="button" class="btn--cam" [class]="{ muted: state.cameraMuted, disabled: !state.local }" (click)="toggleCamera()">
+					<svg width="24" height="24" viewBox="0 0 24 24"><use xlink:href="#cam"></use></svg>
+				</button>
+				<button type="button" class="btn--mic" [class]="{ muted: state.audioMuted, disabled: !state.local }" (click)="toggleAudio()">
+					<svg width="24" height="24" viewBox="0 0 24 24"><use xlink:href="#mic"></use></svg>
+				</button>
+			</div>
+		</div>
+		<div class="center">
+			<button type="button" class="btn--ar" [href]="view?.ar" (click)="tryInAr()" *if="view?.ar">
+				<svg width="24" height="24" viewBox="0 0 24 24"><use xlink:href="#ar"></use></svg> <span>Try in AR</span>
+			</button>
+			<button type="button" class="btn--vr" [class]="{ disabled: vrService.isDisabled() }" (click)="vrService.toggleVR()">
+				<svg width="24" height="24" viewBox="0 0 24 24"><use xlink:href="#vr"></use></svg> <span [innerHTML]="vrService.getLabel()"></span>
+			</button>
+			<!-- <span *if="!view?.ar">&nbsp;</span> -->
+		</div>
+		<div class="right">
+			<button type="button" class="btn--heart" [class]="{ active: view?.liked }" (click)="addToWishlist($event)">
+				<svg width="24" height="24" viewBox="0 0 24 24"><use xlink:href="#heart"></use></svg>
+				<span class="badge" [innerHTML]="view?.likes"></span>
+			</button>
+		</div>
+	</div>
+
+	<div class="ui__lock" (mousedown)="onPrevent($event)" (touchstart)="onPrevent($event)" *if="state.locked"></div>
+	<div class="ui__lock control" *if="state.control"></div>
+
+</div>
+
+<!-- @@close-->

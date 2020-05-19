@@ -1,0 +1,30 @@
+<!-- SLIDER -->
+<div class="slider-container" slider [items]="view.items" (tween)="onTween($event)" (change)="onChange($event)" *if="view.items.length">
+	<div class="slider-inner">
+		<div class="slider-slide" *for="let item of items; let index = index;">
+			<div class="world__item" model-gltf [item]="item" *if="item.type == 'gltf'">
+				<div class="progress" [innerHTML]="progress + '%'" *if="progress"></div>
+			</div>
+			<div class="world__item" model-picture [item]="item" *if="item.type == 'picture'">
+				<img [src]="item.image" />
+			</div>
+			<div class="world__item" model-text [item]="item" *if="item.type == 'text'">
+				<div class="title" [innerHTML]="item.title" *if="item.title"></div>
+				<div class="abstract" [innerHTML]="item.abstract" *if="item.abstract"></div>
+				<div class="description" [innerHTML]="item.description" *if="item.description"></div>
+			</div>
+			<div class="world__item" model [item]="item" *if="!item.type"></div>
+		</div>
+	</div>
+	<div class="slider-pagination">
+		<button type="button" class="btn--prev" [class]="{ disabled: !hasPrev() }" (click)="navTo(current - 1)">
+			<svg class="arrow-prev"><use xlink:href="#arrow-prev"></use></svg>
+		</button>
+		<button type="button" class="btn--next" [class]="{ disabled: !hasNext() }" (click)="navTo(current + 1)">
+			<svg class="arrow-next"><use xlink:href="#arrow-next"></use></svg>
+		</button>
+	</div>
+	<div class="slider-bullets">
+		<span class="slider-bullet" [class]="{ active: index === current }" *for="let slide of items; let index = index" (click)="navTo(index)"></span>
+	</div>
+</div>

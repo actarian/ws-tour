@@ -1,0 +1,540 @@
+$family: $font-secondary;
+$size: 34px;
+$weight: $font-light;
+$spacing: 0;
+$line: 1; // always
+$pristine: $foreground;
+$dirty: $foreground;
+$touched: $foreground;
+$valid: $foreground;
+$invalid: $foreground-primary;
+
+%btn--disabled {
+	opacity: 0.5;
+	background: rgb(125, 125, 125);
+	color: white;
+}
+
+%label {
+	display: block;
+	flex: 0 0 100%;
+	font-family: $font-secondary;
+	font-size: 13px;
+	opacity: 0.3;
+	font-weight: $font-semibold;
+	line-height: $line;
+	margin-bottom: -1px;
+	color: $pristine;
+	text-transform: uppercase;
+}
+
+%placeholder {
+	text-transform: uppercase;
+	color: rgba($pristine, 0.4);
+}
+
+%group--form {
+	display: flex;
+	flex-wrap: wrap;
+	padding: 3px 1px;
+	border-bottom: 2px solid $foreground;
+	margin-bottom: 15px;
+
+	label {
+		@extend %label;
+	}
+
+	@include media-down(xs) {
+		margin-bottom: 10px;
+	}
+}
+
+@mixin autofill($color: black, $background: white, $borderColor: transparent, $borderWidth: 0px, $borderRadius: 0px) {
+	background: $background;
+	color: $color;
+	border: $borderWidth solid $borderColor;
+	border-radius: $borderRadius;
+	outline: none;
+
+	&:-webkit-autofill,
+	&:-webkit-autofill:hover,
+	&:-webkit-autofill:focus {
+		background: $background;
+		color: $color;
+		border: $borderWidth solid $borderColor;
+		border-radius: $borderRadius;
+		font-family: $family;
+		font-size: $size;
+		font-weight: $weight;
+		letter-spacing: $spacing;
+		line-height: $line;
+		text-transform: uppercase;
+		-webkit-text-fill-color: $color;
+		box-shadow: 0 0 0px 1000px $background inset;
+		transition: background-color 5000s ease-in-out 0s;
+	}
+
+	&::placeholder {
+		font-family: $family;
+		font-size: $size;
+		font-weight: $weight;
+		letter-spacing: $spacing;
+		line-height: $line;
+		@extend %placeholder;
+	}
+}
+
+%control--text {
+	@include autofill($foreground, transparent);
+	flex: 1 1 auto;
+	max-width: 100%;
+	margin: 0;
+	padding: 0 20px 0 0;
+	background: none;
+	border: none;
+	outline: none;
+	appearance: none;
+	color: $foreground;
+	font-family: $family;
+	font-size: $size;
+	font-weight: $weight;
+	letter-spacing: $spacing;
+	line-height: $line;
+
+	&.pristine {
+		color: $pristine;
+	}
+
+	&.dirty {
+		color: $dirty;
+	}
+
+	&.touched {
+		color: $touched;
+	}
+
+	&.valid {
+		border-color: $valid;
+		color: $valid;
+	}
+
+	&.invalid:not(.pristine) {
+		color: $invalid;
+	}
+}
+
+.form {
+
+	.title {
+		@extend %subtitle;
+	}
+
+	.group--cta {
+		display: flex;
+		justify-content: center;
+		margin-top: 30px;
+		padding: 20px 0;
+		border-bottom: 1px solid rgba(#16255b, 0.2);
+	}
+
+	.group--info {
+		text-align: center;
+		margin: 40px 0;
+	}
+
+	.btn--submit {
+		opacity: 0.5;
+	}
+
+	&.valid {
+		.btn--submit {
+			opacity: 1;
+		}
+	}
+
+	[control-custom-select] .dropdown {
+		top: 100%;
+		width: 100%;
+		margin-top: 10px;
+		left: 0;
+		border-radius: 12px;
+	}
+
+}
+
+.group--error {
+	background: #fae6e6;
+	color: #dc1215;
+	text-align: center;
+	padding: 5px;
+	font-size: 16px;
+	font-weight: 600;
+}
+
+fieldset,
+.form {
+	display: block;
+	margin: 0;
+	padding: 0;
+	border: none;
+}
+
+/* text */
+
+.group--form {
+	@extend %group--form;
+}
+
+.control--text {
+	@extend %control--text;
+}
+
+/* textarea */
+
+.group--form--textarea {
+	@extend %group--form;
+	padding: 15px 10px;
+	border: 2px solid $foreground;
+
+	.control--text {
+		resize: vertical;
+		font-size: 24px;
+	}
+
+	label {
+		margin-bottom: 5px;
+	}
+}
+
+/* select */
+
+.group--form--select {
+	@extend %group--form;
+	position: relative;
+	background: $background;
+	border: none;
+	border-radius: 12px;
+	padding: 8px 15px;
+	cursor: pointer;
+
+	input {
+		pointer-events: none;
+	}
+
+	.icon--caret-down {
+		width: 12px;
+		height: 12px;
+		margin: 0;
+		fill: #ccc;
+		pointer-events: none;
+	}
+
+	&.required .required__badge {
+		display: none;
+	}
+
+	@include media-down(xs) {
+		margin: 0 0 10px 0;
+	}
+}
+
+.control--select {
+	@extend %control--text;
+	font-size: 21px;
+	text-transform: uppercase;
+	line-height: 1;
+
+	.multiple>& {
+		white-space: nowrap;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		max-width: calc(100% - 23px);
+	}
+}
+
+/* checkbox */
+
+.group--form--checkbox {
+	@extend %group--form;
+	align-items: center;
+	flex-wrap: nowrap;
+	min-height: 77px;
+	padding-top: 44px;
+
+	input {
+		width: 11px;
+		height: 11px;
+		border-radius: 0;
+		cursor: pointer;
+	}
+
+	input {
+		appearance: none;
+		padding: 0;
+		margin: 0 10px 0 0;
+		border: 2px solid $pristine;
+		outline: 0;
+
+		&:checked {
+			background: $pristine;
+		}
+	}
+
+	label {
+		flex: 1 1 auto;
+		cursor: pointer;
+	}
+
+	a {
+		font-weight: $font-semibold;
+		text-decoration: underline;
+	}
+
+	/*
+	label {
+		display: flex;
+		align-items: center;
+		cursor: pointer;
+
+		input {
+			appearance: none;
+			padding: 0;
+			margin: 0 10px 0 0;
+			border: 2px solid $pristine;
+			outline: 0;
+
+			&:checked {
+				background: $pristine;
+			}
+		}
+	}
+	*/
+}
+
+/* radio */
+
+.group--form--radio {
+	min-height: 72px;
+	padding-top: 19px;
+
+	input {
+		width: 12px;
+		height: 12px;
+		border-radius: 7px;
+	}
+
+	span {
+		margin: 0 5px 0 4px;
+	}
+}
+
+/* file */
+
+.group--form--file {
+	@extend %group--form;
+	position: relative;
+	border: none;
+	background: $background-secondary;
+	padding: 10px 10px;
+	margin-top: 13px;
+	cursor: pointer;
+
+	.icon--upload {
+		margin: 0 7px 0 0;
+		fill: $pristine;
+		pointer-events: none;
+	}
+}
+
+.control--file {
+	color: transparent;
+	background: rgba(0, 1, 0, 0.2);
+	opacity: 0;
+	position: absolute;
+	top: 0;
+	left: 0;
+	width: 100%;
+	height: 100%;
+	cursor: pointer;
+}
+
+/* errors */
+
+errors-component {
+	display: block;
+
+	.inner {
+		@extend %label;
+		margin-top: -10px;
+		margin-bottom: 10px;
+		padding: 7px 7px;
+		font-size: 14px;
+		background: $invalid;
+		color: $foreground-negative;
+	}
+}
+
+/* results */
+
+.group--form--results {
+	justify-content: center;
+	margin: 30px 0;
+	padding: 10px 15px;
+	font-size: 14px;
+	text-align: center;
+	background: rgba(255, 255, 255, 0.8);
+
+	@include media-down(xs) {
+		display: none;
+	}
+}
+
+.listing--form {
+	display: flex;
+	justify-content: flex-start;
+	align-items: flex-start;
+	flex-wrap: wrap;
+
+	@include media-up(lg) {
+		$gutter: 30px;
+		margin-left: - $gutter / 2;
+		margin-right: - $gutter / 2;
+
+		&>div {
+			@include as-col(4, 12, $gutter);
+
+			&[control-textarea] {
+				@include as-col(12, 12, $gutter);
+			}
+		}
+	}
+
+	@include media-down(md) {
+		$gutter: 30px;
+		margin-left: - $gutter / 2;
+		margin-right: - $gutter / 2;
+
+		&>div {
+			@include as-col(6, 12, $gutter);
+
+			&[control-textarea] {
+				@include as-col(12, 12, $gutter);
+			}
+		}
+	}
+
+	@include media-down(xs) {
+		margin-left: 0;
+		margin-right: 0;
+
+		&>div {
+			@include as-col(12, 12, 0);
+
+			&[control-textarea] {
+				flex: 1 1 100%;
+				max-width: 100%;
+				margin-left: 0;
+				margin-right: 0;
+			}
+		}
+	}
+}
+
+.listing--form-compact {
+	display: flex;
+	justify-content: flex-start;
+	align-items: flex-start;
+	flex-wrap: wrap;
+
+	@include media-up(lg) {
+		$gutter: 30px;
+		margin-left: - $gutter / 2;
+		margin-right: - $gutter / 2;
+
+		&>div {
+			@include as-col(4, 12, $gutter);
+
+			&[control-checkbox] {
+				@include as-col(6, 12, $gutter);
+			}
+
+			&[control-textarea] {
+				@include as-col(12, 12, $gutter);
+			}
+		}
+	}
+
+	@include media-down(md) {
+		$gutter: 30px;
+		margin-left: - $gutter / 2;
+		margin-right: - $gutter / 2;
+
+		&>div {
+			@include as-col(6, 12, $gutter);
+
+			&[control-textarea] {
+				@include as-col(12, 12, $gutter);
+			}
+		}
+	}
+
+	@include media-down(xs) {
+		margin-left: 0;
+		margin-right: 0;
+
+		&>div {
+			@include as-col(12, 12, 0);
+
+			&[control-textarea] {
+				flex: 1 1 100%;
+				max-width: 100%;
+				margin-left: 0;
+				margin-right: 0;
+			}
+		}
+	}
+}
+
+[control-custom-select] {
+	position: relative;
+
+	&.hidden {
+		display: block;
+		visibility: hidden;
+		pointer-events: none;
+	}
+
+	@include media-up(md) {
+
+		.dropdown {
+			top: -65px;
+			left: 100%;
+		}
+
+	}
+}
+
+.required__badge {
+	display: none;
+}
+
+.required {
+	position: relative;
+
+	.required__badge {
+		@extend %label;
+		display: block;
+		position: absolute;
+		font-size: 11px;
+		right: 0px;
+		top: 10px;
+	}
+
+	&.group--form--select,
+	&.group--form--file {
+		.required__badge {
+			top: 8px;
+			right: 10px;
+		}
+	}
+}

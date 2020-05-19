@@ -1,0 +1,159 @@
+{
+  "products": [
+    {
+      "id": 3,
+      "name": "Worn Brown Boots",
+      "likes": 82,
+      "added": false,
+      "ar": "models/worn_brown_boots.usdz",
+      "envMapFolder": "equirectangular/",
+      "envMapFile": "leadenhall_market_2k.hdr",
+      "items": [
+        {
+          "id": 31,
+          "type": "gltf",
+          "title": "modello 3d",
+          "gltfFolder": "worn_brown_boots/",
+          "gltfFile": "worn_brown_boots.glb"
+        },
+        {
+          "id": 32,
+          "type": "picture",
+          "title": "modello 3d",
+          "image": "./img/picture-01.jpg"
+        },
+        {
+          "id": 34,
+          "type": "text",
+          "title": "Titolo",
+          "abstract": "Abstract",
+          "description": "Lorem ipsum"
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "name": "Vintage Womens Boots",
+      "likes": 43,
+      "added": false,
+      "ar": "models/worn_brown_boots.usdz",
+      "envMapFolder": "equirectangular/",
+      "envMapFile": "leadenhall_market_2k.hdr",
+      "items": [
+        {
+          "id": 41,
+          "type": "gltf",
+          "title": "modello 3d",
+          "gltfFolder": "vintage_womens_boots_1280/",
+          "gltfFile": "vintage_womens_boots_1280.glb"
+        },
+        {
+          "id": 42,
+          "type": "picture",
+          "title": "modello 3d",
+          "image": "./img/picture-02.jpg"
+        },
+        {
+          "id": 43,
+          "type": "text",
+          "title": "Titolo",
+          "abstract": "Abstract",
+          "description": "Lorem ipsum"
+        }
+      ]
+    },
+    {
+      "id": 1,
+      "name": "Leather Shoes",
+      "likes": 82,
+      "added": false,
+      "ar": "models/leather-shoes.usdz",
+      "envMapFolder": "equirectangular/",
+      "envMapFile": "leadenhall_market_2k.hdr",
+      "items": [
+        {
+          "id": 11,
+          "type": "gltf",
+          "title": "modello 3d",
+          "gltfFolder": "leather-shoes/",
+          "gltfFile": "leather-shoes.gltf"
+        },
+        {
+          "id": 13,
+          "type": "picture",
+          "title": "modello 3d",
+          "image": "./img/picture-01.jpg"
+        },
+        {
+          "id": 15,
+          "type": "text",
+          "title": "Titolo",
+          "abstract": "Abstract",
+          "description": "Lorem ipsum"
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "name": "Mens Oxford Shoes",
+      "likes": 146,
+      "added": false,
+      "ar": "models/Mens_Oxford_Shoes.usdz",
+      "envMapFolder": "equirectangular/",
+      "envMapFile": "leadenhall_market_2k.hdr",
+      "items": [
+        {
+          "id": 21,
+          "type": "gltf",
+          "title": "modello 3d",
+          "gltfFolder": "Mens_Oxford_Shoes/",
+          "gltfFile": "Mens_Oxford_Shoes.glb"
+        },
+        {
+          "id": 22,
+          "type": "picture",
+          "title": "modello 3d",
+          "image": "./img/picture-02.jpg"
+        },
+        {
+          "id": 23,
+          "type": "text",
+          "title": "Titolo",
+          "abstract": "Abstract",
+          "description": "Lorem ipsum"
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "name": "Helmet",
+      "likes": 372,
+      "added": false,
+      "ar": "models/Mens_Oxford_Shoes.usdz",
+      "envMapFolder": "equirectangular/",
+      "envMapFile": "leadenhall_market_2k.hdr",
+      "items": [
+        {
+          "id": 21,
+          "type": "gltf",
+          "title": "modello 3d",
+          "gltfFolder": "damaged-helmet/",
+          "gltfFile": "damaged-helmet.glb"
+        },
+        {
+          "id": 22,
+          "type": "picture",
+          "title": "modello 3d",
+          "image": "./img/picture-02.jpg"
+        },
+        {
+          "id": 23,
+          "type": "text",
+          "title": "Titolo",
+          "abstract": "Abstract",
+          "description": "Lorem ipsum"
+        }
+      ]
+    }
+  ]
+}

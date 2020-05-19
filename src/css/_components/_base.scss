@@ -1,0 +1,108 @@
+html {
+	width: 100%;
+	height: 100%;
+	margin: 0;
+	overflow-x: hidden;
+	overflow-y: auto;
+	overscroll-behavior: none;
+	scroll-behavior: smooth;
+	--vh: 1vh;
+}
+
+body {
+	width: 100%;
+	min-height: 100%;
+	margin: 0;
+	padding: 0;
+	@include scrollbar();
+
+	&.fixed {
+		position: fixed;
+	}
+
+	@include media-down(sm) {
+		overflow-x: hidden;
+		overflow-y: auto;
+	}
+}
+
+img {
+	display: block;
+	max-width: 100%;
+}
+
+[unselectable] {
+	-webkit-touch-callout: none;
+	user-select: none;
+}
+
+.app {
+	position: relative;
+}
+
+.hidden {
+	display: none;
+}
+
+.sticky--menu {
+	position: absolute;
+	width: 100%;
+	bottom: 0;
+	pointer-events: none;
+
+	.section--menu {
+		position: sticky;
+		top: 15px;
+		width: 100%;
+		pointer-events: all;
+		z-index: 900;
+
+		.nav--menu {
+			margin-top: 0;
+			box-shadow: 0 10px 10px -10px rgba(0, 0, 0, 0.2);
+		}
+	}
+
+	@include media-up(md) {
+		top: 160px;
+	}
+
+	@include media-down(sm) {
+		display: block;
+		position: fixed;
+		bottom: 0;
+		top: auto;
+		z-index: 100;
+
+		.nav--menu {
+			opacity: 0;
+			visibility: hidden;
+			pointer-events: none;
+			height: 0;
+		}
+
+		.container-fluid {
+			padding: 0;
+		}
+
+		.section--menu.active {
+
+			.nav--menu {
+				opacity: 1;
+				visibility: visible;
+				pointer-events: auto;
+				background: #34447d;
+				transition: all ease-in-out 400ms;
+				height: calc(100vh - 103px); // Fallback for browsers that do not support Custom Properties
+				height: calc(var(--vh, 1vh) * 100 - 103px);
+			}
+
+		}
+	}
+}
+
+.section--hero-tertiary+.sticky--menu {
+	@include media-up(md) {
+		top: 132px;
+	}
+}
