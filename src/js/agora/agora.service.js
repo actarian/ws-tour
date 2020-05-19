@@ -9,6 +9,7 @@ import Emittable from '../emittable/emittable';
 import HttpService from '../http/http.service';
 import LocationService from '../location/location.service';
 
+export const USE_AUTODETECT = true;
 export const USE_RTM = true;
 
 export const StreamQualities = [{
@@ -91,9 +92,12 @@ export const MessageType = {
 	RequestControlRejected: 'requestControlRejected',
 	RequestControlDismiss: 'requestControlDismiss',
 	RequestControlDismissed: 'requestControlDismissed',
+	RequestInfo: 'requestInfo',
+	RequestInfoResult: 'requestInfoResult',
 	SlideChange: 'slideChange',
-	CameraRotate: 'slideRotate',
-	NavToView: 'menuNavTo',
+	CameraRotate: 'cameraRotate',
+	CameraOrientation: 'cameraOrientation',
+	NavToView: 'navToView',
 };
 
 export class AgoraEvent {
@@ -304,15 +308,20 @@ export default class AgoraService extends Emittable {
 					});
 				});
 			}
-			this.createMediaStream(uid, this.state.devices.video, this.state.devices.audio);
-			/*
-			this.detectDevices((devices) => {
-				console.log('AgoraService.detectDevices', devices);
-				const cameraId = devices.videos.length ? devices.videos[0].deviceId : null;
-				const microphoneId = devices.audios.length ? devices.audios[0].deviceId : null;
-				this.createLocalStream(uid, microphoneId, cameraId);
-			});
-			*/
+			if (USE_AUTODETECT) {
+				this.detectDevices((devices) => {
+					const video = devices.videos.length ? devices.videos[0] : null;
+					const audio = devices.audios.length ? devices.audios[0] : null;
+					this.createMediaStream(uid, video, audio);
+					/*
+					const cameraId = devices.videos.length ? devices.videos[0].deviceId : null;
+					const microphoneId = devices.audios.length ? devices.audios[0].deviceId : null;
+					this.createLocalStream(uid, microphoneId, cameraId);
+					*/
+				});
+			} else {
+				this.createMediaStream(uid, this.state.devices.video, this.state.devices.audio);
+			}
 		}, (error) => {
 			console.log('Join channel failed', error);
 		});
@@ -334,23 +343,24 @@ export default class AgoraService extends Emittable {
 	}
 
 	sendMessage(message) {
-		message.wrc_version = 'beta';
-		message.uid = this.state.uid;
-		const messageChannel = this.messageChannel;
-		messageChannel.sendMessage({ text: JSON.stringify(message) });
-		// console.log('wrc: send', message);
-		if (message.rpcid) {
-			return new Promise(resolve => {
-				this.once(`message-${message.rpcid}`, (message) => {
-					resolve(message);
+		if (this.state.connected) {
+			message.wrc_version = 'beta';
+			message.uid = this.state.uid;
+			const messageChannel = this.messageChannel;
+			messageChannel.sendMessage({ text: JSON.stringify(message) });
+			// console.log('wrc: send', message);
+			if (message.rpcid) {
+				return new Promise(resolve => {
+					this.once(`message-${message.rpcid}`, (message) => {
+						resolve(message);
+					});
 				});
-			});
-		} else {
-			return Promise.resolve(message);
+			} else {
+				return Promise.resolve(message);
+			}
 		}
 	}
 
-	/*
 	detectDevices(next) {
 		AgoraRTC.getDevices((devices) => {
 			const videos = [];
@@ -375,7 +385,6 @@ export default class AgoraService extends Emittable {
 			next({ videos: videos, audios: audios });
 		});
 	}
-	*/
 
 	getVideoStream(options, video) {
 		return new Promise((resolve, reject) => {
@@ -452,7 +461,7 @@ export default class AgoraService extends Emittable {
 							});
 						});
 					});
-				} else if (audio.kind === 'videoplayer' || video.kind === 'videostream') {
+				} else if (audio.kind === 'videoplayer' || audio.kind === 'videostream') {
 					const element = document.querySelector('#' + audio.deviceId);
 					element.crossOrigin = 'anonymous';
 					// element.oncanplay = () => {
@@ -581,6 +590,7 @@ export default class AgoraService extends Emittable {
 	}
 
 	leaveChannel() {
+		this.patchState({ connecting: false });
 		const client = this.client;
 		client.leave(() => {
 			// console.log('Leave channel successfully');
@@ -629,11 +639,38 @@ export default class AgoraService extends Emittable {
 				this.patchState({ control: !control });
 			});
 		} else {
+			if (this.state.spying) {
+				this.patchState({ spying: false });
+			}
 			this.sendRemoteControlRequest().then((control) => {
 				// console.log('AgoraService.sendRemoteControlRequest', control);
 				this.patchState({ control: control });
 			});
 		}
+	}
+
+	toggleSpy() {
+		if (this.state.control) {
+			this.sendRemoteControlDismiss().then((control) => {
+				this.patchState({ control: false });
+				this.sendRemoteRequestInfo().then((info) => {
+					this.patchState({ spying: true, control: false });
+				});
+			});
+		} else if (this.state.spying) {
+			this.patchState({ spying: false, control: false });
+		} else {
+			this.sendRemoteRequestInfo().then((info) => {
+				this.patchState({ spying: true, control: false });
+			});
+		}
+	}
+
+	navToView(viewId) {
+		this.sendMessage({
+			type: MessageType.NavToView,
+			viewId: viewId,
+		});
 	}
 
 	getRemoteTargetUID() {
@@ -686,6 +723,21 @@ export default class AgoraService extends Emittable {
 					resolve(true);
 				} else if (message.type === MessageType.RequestControlRejected) {
 					// this.remoteDeviceInfo = undefined
+					resolve(false);
+				}
+			});
+		});
+	}
+
+	sendRemoteRequestInfo(message) {
+		return new Promise((resolve, reject) => {
+			this.sendMessage({
+				type: MessageType.RequestInfo,
+				rpcid: Date.now().toString(),
+			}).then((message) => {
+				if (message.type === MessageType.RequestInfoResult) {
+					resolve(true);
+				} else {
 					resolve(false);
 				}
 			});

@@ -1,10 +1,11 @@
 import { Component, getContext } from 'rxcomp';
 import { takeUntil, tap } from 'rxjs/operators';
 import * as THREE from 'three';
+import { Vector2 } from 'three';
 import { XRControllerModelFactory } from 'three/examples/jsm/webxr/XRControllerModelFactory.js';
 import { environment } from '../../environment/environment';
 // import { VRButton } from 'three/examples/jsm/webxr/VRButton.js';
-import AgoraService, { MessageType, RoleType } from '../agora/agora.service';
+import AgoraService, { MessageType } from '../agora/agora.service';
 import { BASE_HREF, DEBUG } from '../const';
 import DragService, { DragDownEvent, DragMoveEvent, DragUpEvent } from '../drag/drag.service';
 // import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
@@ -37,9 +38,7 @@ export default class WorldComponent extends Component {
 	set view(view) {
 		if (this.view_ !== view) {
 			this.view_ = view;
-			if (view) {
-				this.setView();
-			}
+			this.setView();
 		}
 	}
 
@@ -66,6 +65,7 @@ export default class WorldComponent extends Component {
 	createScene() {
 		const { node } = getContext(this);
 		this.size = { width: 0, height: 0, aspect: 0 };
+		this.mouse = new Vector2();
 
 		const container = this.container = node;
 		const info = this.info = node.querySelector('.world__info');
@@ -212,17 +212,25 @@ export default class WorldComponent extends Component {
 	}
 
 	setView() {
-		if (this.orbit) {
-			this.orbit.setOrientation(this.view.orientation);
-		}
-		if (this.panorama) {
-			this.panorama.swap(this.view, this.renderer, (envMap, texture, rgbe) => {
-				// this.scene.background = envMap;
-				this.scene.environment = envMap;
-				this.torus.material.envMap = envMap;
-				this.torus.material.needsUpdate = true;
-				// this.render();
-			});
+		const view = this.view_;
+		if (view) {
+			if (this.orbit) {
+				if (this.infoResultMessage) {
+					this.infoResultMessage = null;
+					this.orbit.setOrientation(this.infoResultMessage.orientation);
+				} else {
+					this.orbit.setOrientation(view.orientation);
+				}
+			}
+			if (this.panorama) {
+				this.panorama.swap(view, this.renderer, (envMap, texture, rgbe) => {
+					// this.scene.background = envMap;
+					this.scene.environment = envMap;
+					this.torus.material.envMap = envMap;
+					this.torus.material.needsUpdate = true;
+					// this.render();
+				});
+			}
 		}
 	}
 
@@ -361,32 +369,6 @@ export default class WorldComponent extends Component {
 		this.navTo.next(event.navTo);
 	}
 
-	drag$_() {
-		let rotation;
-		return DragService.events$(this.node).pipe(
-			tap((event) => {
-				const panorama = this.panorama;
-				if (event instanceof DragDownEvent) {
-					rotation = panorama.mesh.rotation.clone();
-				} else if (event instanceof DragMoveEvent) {
-					this.panorama.mesh.rotation.set(rotation.x + event.distance.y * 0.01, rotation.y + event.distance.x * 0.01 + Math.PI, 0);
-					// this.render();
-					// this.rotate.next([panorama.x, panorama.y, panorama.z]);
-					/*
-					if (this.agora && this.agora.state.control) {
-						this.agora.sendMessage({
-							type: MessageType.CameraRotate,
-							coords: [panorama.x, panorama.y, group.rotation.z]
-						});
-					}
-					*/
-				} else if (event instanceof DragUpEvent) {
-
-				}
-			})
-		);
-	}
-
 	drag$() {
 		let rotation;
 		return DragService.events$(this.node).pipe(
@@ -398,7 +380,6 @@ export default class WorldComponent extends Component {
 					group.rotation.set(rotation.x + event.distance.y * 0.01, rotation.y + event.distance.x * 0.01, 0);
 					this.panorama.mesh.rotation.set(rotation.x + event.distance.y * 0.01, rotation.y + event.distance.x * 0.01 + Math.PI, 0);
 					this.render();
-					// this.rotate.next([group.rotation.x, group.rotation.y, group.rotation.z]);
 					if (this.agora && this.agora.state.control) {
 						this.agora.sendMessage({
 							type: MessageType.CameraRotate,
@@ -416,9 +397,9 @@ export default class WorldComponent extends Component {
 		// this.render();
 	}
 
-	onChange(index) {
+	onSlideChange(index) {
 		this.index = index;
-		this.change.next(index);
+		this.slideChange.next(index);
 	}
 
 	updateRaycaster() {
@@ -564,17 +545,17 @@ export default class WorldComponent extends Component {
 			*/
 			const w2 = this.size.width / 2;
 			const h2 = this.size.height / 2;
-			this.mouse = {
-				x: (event.clientX - w2) / w2,
-				y: -(event.clientY - h2) / h2,
-			};
+			this.mouse.x = (event.clientX - w2) / w2;
+			this.mouse.y = -(event.clientY - h2) / h2;
 			const raycaster = this.raycaster;
 			raycaster.setFromCamera(this.mouse, this.camera);
 			const hit = InteractiveMesh.hittest(raycaster, true);
 			if (hit) {
-				console.log('onMouseDown.hit', hit);
 				if (hit === this.panorama.mesh) {
-
+					if (DEBUG) {
+						const position = new THREE.Vector3().copy(hit.intersection.point).normalize();
+						console.log(JSON.stringify({ position: position.toArray() }));
+					}
 				} else {
 					// controllers.feedback();
 					// if (Tone.context.state === 'running') {
@@ -592,10 +573,8 @@ export default class WorldComponent extends Component {
 		try {
 			const w2 = this.size.width / 2;
 			const h2 = this.size.height / 2;
-			this.mouse = {
-				x: (event.clientX - w2) / w2,
-				y: -(event.clientY - h2) / h2,
-			};
+			this.mouse.x = (event.clientX - w2) / w2;
+			this.mouse.y = -(event.clientY - h2) / h2;
 			/*
 			if (TEST_ENABLED) {
 				return this.controllers.updateTest(this.mouse);
@@ -654,10 +633,13 @@ export default class WorldComponent extends Component {
 			takeUntil(this.unsubscribe$),
 		).subscribe(event => {
 			// this.render();
+			if (DEBUG) {
+				console.log(JSON.stringify({ orientation: this.orbit.getOrientation() }));
+			}
 			if (this.agora) {
 				this.agora.sendMessage({
-					type: MessageType.CameraRotate,
-					coords: [this.camera.position.x, this.camera.position.y, this.camera.position.z]
+					type: MessageType.CameraOrientation,
+					orientation: this.orbit.getOrientation()
 				});
 			}
 		});
@@ -679,8 +661,27 @@ export default class WorldComponent extends Component {
 				takeUntil(this.unsubscribe$)
 			).subscribe(message => {
 				switch (message.type) {
+					case MessageType.RequestInfo:
+						message.type = MessageType.RequestInfoResult;
+						message.viewId = this.view.id;
+						message.orientation = this.orbit.getOrientation();
+						agora.sendMessage(message);
+						break;
+					case MessageType.RequestInfoResult:
+						if (message.viewId === this.view.id) {
+							this.orbit.setOrientation(message.orientation);
+						} else {
+							this.infoResultMessage = message;
+						}
+						break;
+					case MessageType.CameraOrientation:
+						if (agora.state.locked || agora.state.spying) {
+							this.orbit.setOrientation(message.orientation);
+							// this.render();
+						}
+						break;
 					case MessageType.CameraRotate:
-						if ((agora.state.locked || agora.state.role === RoleType.Publisher) && message.coords) {
+						if (agora.state.locked || agora.state.spying) {
 							const camera = this.camera;
 							camera.position.set(message.coords[0], message.coords[1], message.coords[2]);
 							camera.lookAt(ORIGIN);
@@ -713,5 +714,5 @@ export default class WorldComponent extends Component {
 WorldComponent.meta = {
 	selector: '[world]',
 	inputs: ['view'],
-	outputs: ['change', 'rotate', 'navTo'],
+	outputs: ['slideChange', 'navTo'],
 };

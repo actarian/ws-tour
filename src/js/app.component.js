@@ -36,13 +36,18 @@ export default class AppComponent extends Component {
 					case MessageType.RequestControlAccepted:
 						agora.sendMessage({
 							type: MessageType.NavToView,
-							id: this.view.id,
+							viewId: this.view.id,
 						});
 						break;
+					case MessageType.RequestInfoResult:
+						if (this.controls.view.value !== message.viewId) {
+							this.controls.view.value = message.viewId;
+						}
+						break;
 					case MessageType.NavToView:
-						if (agora.state.locked && message.id) {
-							if (this.controls.view.value !== message.id) {
-								this.controls.view.value = message.id;
+						if ((agora.state.locked || agora.state.spying) && message.viewId) {
+							if (this.controls.view.value !== message.viewId) {
+								this.controls.view.value = message.viewId;
 							}
 						}
 						break;
@@ -78,18 +83,11 @@ export default class AppComponent extends Component {
 		if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
 			navigator.mediaDevices.getUserMedia({ video: true, audio: true }).then((stream) => {
 				console.log('stream', stream);
-				if (!DEBUG) {
-					this.agora.patchState({ mediaStatus: MediaStatus.Ready });
-				}
+				this.agora.patchState({ mediaStatus: MediaStatus.Ready });
 			}).catch((error) => {
 				console.log('media error', error);
 			});
 		}
-	}
-
-	onPrevent(event) {
-		event.preventDefault();
-		event.stopImmediatePropagation();
 	}
 
 	loadData() {
@@ -123,11 +121,9 @@ export default class AppComponent extends Component {
 			setTimeout(() => {
 				this.view = view;
 				this.pushChanges();
-				if (!DEBUG && this.agora.state.control) {
-					this.agora.sendMessage({
-						type: MessageType.NavToView,
-						id: view.id,
-					});
+				// !!!
+				if (!DEBUG) {
+					this.agora.navToView(view.id);
 				}
 			}, 1);
 		});
@@ -135,8 +131,8 @@ export default class AppComponent extends Component {
 
 	connect() {
 		if (!this.state.connecting) {
-			this.state.connecting = true;
-			this.pushChanges();
+			let quality = this.agora.state.role === RoleType.Attendee ? StreamQualities[StreamQualities.length - 1] : StreamQualities[1]; // HD 1920
+			this.agora.patchState({ connecting: true, quality });
 			setTimeout(() => {
 				this.agora.connect$().pipe(
 					takeUntil(this.unsubscribe$)
@@ -149,17 +145,15 @@ export default class AppComponent extends Component {
 	}
 
 	disconnect() {
-		this.state.connecting = false;
 		if (!DEBUG) {
 			this.agora.leaveChannel();
 		} else {
-			this.state.connected = false;
-			this.pushChanges();
+			this.patchState({ connecting: false, connected: false });
 		}
 	}
 
-	onChange(index) {
-		if (!DEBUG && this.state.control) {
+	onSlideChange(index) {
+		if (!DEBUG) {
 			this.agora.sendMessage({
 				type: MessageType.SlideChange,
 				index
@@ -167,27 +161,9 @@ export default class AppComponent extends Component {
 		}
 	}
 
-	onNavTo(id) {
-		// const view = this.data.views.find(x => x.id === id);
-		if (this.controls.view.value !== id) {
-			this.controls.view.value = id;
-		}
-		/*
-		if (!DEBUG && this.state.control) {
-			this.agora.sendMessage({
-				type: MessageType.SlideChange,
-				index
-			});
-		}
-		*/
-	}
-
-	onRotate(coords) {
-		if (!DEBUG && this.state.control) {
-			this.agora.sendMessage({
-				type: MessageType.CameraRotate,
-				coords
-			});
+	onNavTo(viewId) {
+		if (this.controls.view.value !== viewId) {
+			this.controls.view.value = viewId;
 		}
 	}
 
@@ -195,34 +171,24 @@ export default class AppComponent extends Component {
 		ModalService.open$({ src: CONTROL_REQUEST, data: null }).pipe(
 			takeUntil(this.unsubscribe$)
 		).subscribe(event => {
-			if (event instanceof ModalResolveEvent) {
-				message.type = MessageType.RequestControlAccepted;
-				this.state.locked = true;
-			} else {
-				message.type = MessageType.RequestControlRejected;
-				this.state.locked = false;
-			}
 			if (!DEBUG) {
+				if (event instanceof ModalResolveEvent) {
+					message.type = MessageType.RequestControlAccepted;
+					this.state.locked = true;
+				} else {
+					message.type = MessageType.RequestControlRejected;
+					this.state.locked = false;
+				}
 				this.agora.sendMessage(message);
+				this.pushChanges();
+			} else {
+				if (event instanceof ModalResolveEvent) {
+					this.patchState({ control: true, spying: false });
+				} else {
+					this.patchState({ control: false, spying: false });
+				}
 			}
-			this.pushChanges();
 		});
-	}
-
-	onDropped(id) {
-		console.log('AppComponent.onDropped', id);
-	}
-
-	parseQueryString() {
-		const action = LocationService.get('action');
-		switch (action) {
-			case 'login':
-				this.openLogin();
-				break;
-			case 'register':
-				this.openRegister();
-				break;
-		}
 	}
 
 	// onView() { const context = getContext(this); }
@@ -231,23 +197,43 @@ export default class AppComponent extends Component {
 
 	// onDestroy() {}
 
+	patchState(state) {
+		this.state = Object.assign({}, this.state, state);
+		this.pushChanges();
+		console.log(this.state);
+	}
+
 	toggleCamera() {
 		if (!DEBUG) {
 			this.agora.toggleCamera();
+		} else {
+			this.patchState({ cameraMuted: !this.state.cameraMuted });
 		}
 	}
 
 	toggleAudio() {
 		if (!DEBUG) {
 			this.agora.toggleAudio();
+		} else {
+			this.patchState({ audioMuted: !this.state.audioMuted });
 		}
 	}
 
 	toggleControl() {
 		if (!DEBUG) {
 			this.agora.toggleControl();
+		} else if (this.state.control) {
+			this.patchState({ control: false });
 		} else {
 			this.onRemoteControlRequest({});
+		}
+	}
+
+	toggleSpy() {
+		if (!DEBUG) {
+			this.agora.toggleSpy();
+		} else {
+			this.patchState({ spying: !this.state.spying, control: false });
 		}
 	}
 
@@ -265,6 +251,11 @@ export default class AppComponent extends Component {
 		).subscribe(event => {
 			// this.pushChanges();
 		});
+	}
+
+	onPrevent(event) {
+		event.preventDefault();
+		event.stopImmediatePropagation();
 	}
 
 }

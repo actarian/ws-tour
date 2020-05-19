@@ -357,9 +357,12 @@
     RequestControlRejected: 'requestControlRejected',
     RequestControlDismiss: 'requestControlDismiss',
     RequestControlDismissed: 'requestControlDismissed',
+    RequestInfo: 'requestInfo',
+    RequestInfoResult: 'requestInfoResult',
     SlideChange: 'slideChange',
-    CameraRotate: 'slideRotate',
-    NavToView: 'menuNavTo'
+    CameraRotate: 'cameraRotate',
+    CameraOrientation: 'cameraOrientation',
+    NavToView: 'navToView'
   };
   var AgoraEvent = function AgoraEvent(options) {
     Object.assign(this, options);
@@ -625,16 +628,20 @@
           });
         }
 
-        _this4.createMediaStream(uid, _this4.state.devices.video, _this4.state.devices.audio);
-        /*
-        this.detectDevices((devices) => {
-        	console.log('AgoraService.detectDevices', devices);
-        	const cameraId = devices.videos.length ? devices.videos[0].deviceId : null;
-        	const microphoneId = devices.audios.length ? devices.audios[0].deviceId : null;
-        	this.createLocalStream(uid, microphoneId, cameraId);
-        });
-        */
+        {
+          _this4.detectDevices(function (devices) {
+            var video = devices.videos.length ? devices.videos[0] : null;
+            var audio = devices.audios.length ? devices.audios[0] : null;
 
+            _this4.createMediaStream(uid, video, audio);
+            /*
+            const cameraId = devices.videos.length ? devices.videos[0].deviceId : null;
+            const microphoneId = devices.audios.length ? devices.audios[0].deviceId : null;
+            this.createLocalStream(uid, microphoneId, cameraId);
+            */
+
+          });
+        }
       }, function (error) {
         console.log('Join channel failed', error);
       }); // https://console.agora.io/invite?sign=YXBwSWQlM0RhYjQyODlhNDZjZDM0ZGE2YTYxZmQ4ZDY2Nzc0YjY1ZiUyNm5hbWUlM0RaYW1wZXR0aSUyNnRpbWVzdGFtcCUzRDE1ODY5NjM0NDU=// join link expire in 30 minutes
@@ -662,50 +669,57 @@
     _proto.sendMessage = function sendMessage(message) {
       var _this6 = this;
 
-      message.wrc_version = 'beta';
-      message.uid = this.state.uid;
-      var messageChannel = this.messageChannel;
-      messageChannel.sendMessage({
-        text: JSON.stringify(message)
-      }); // console.log('wrc: send', message);
+      if (this.state.connected) {
+        message.wrc_version = 'beta';
+        message.uid = this.state.uid;
+        var messageChannel = this.messageChannel;
+        messageChannel.sendMessage({
+          text: JSON.stringify(message)
+        }); // console.log('wrc: send', message);
 
-      if (message.rpcid) {
-        return new Promise(function (resolve) {
-          _this6.once("message-" + message.rpcid, function (message) {
-            resolve(message);
+        if (message.rpcid) {
+          return new Promise(function (resolve) {
+            _this6.once("message-" + message.rpcid, function (message) {
+              resolve(message);
+            });
           });
-        });
-      } else {
-        return Promise.resolve(message);
+        } else {
+          return Promise.resolve(message);
+        }
       }
-    }
-    /*
-    detectDevices(next) {
-    	AgoraRTC.getDevices((devices) => {
-    		const videos = [];
-    		const audios = [];
-    		for (let i = 0; i < devices.length; i++) {
-    			const device = devices[i];
-    			if ('videoinput' == device.kind) {
-    				videos.push({
-    					label: device.label || 'camera-' + videos.length,
-    					deviceId: device.deviceId,
-    					kind: device.kind
-    				});
-    			}
-    			if ('audioinput' == device.kind) {
-    				audios.push({
-    					label: device.label || 'microphone-' + videos.length,
-    					deviceId: device.deviceId,
-    					kind: device.kind
-    				});
-    			}
-    		}
-    		next({ videos: videos, audios: audios });
-    	});
-    }
-    */
-    ;
+    };
+
+    _proto.detectDevices = function detectDevices(next) {
+      AgoraRTC.getDevices(function (devices) {
+        var videos = [];
+        var audios = [];
+
+        for (var i = 0; i < devices.length; i++) {
+          var device = devices[i];
+
+          if ('videoinput' == device.kind) {
+            videos.push({
+              label: device.label || 'camera-' + videos.length,
+              deviceId: device.deviceId,
+              kind: device.kind
+            });
+          }
+
+          if ('audioinput' == device.kind) {
+            audios.push({
+              label: device.label || 'microphone-' + videos.length,
+              deviceId: device.deviceId,
+              kind: device.kind
+            });
+          }
+        }
+
+        next({
+          videos: videos,
+          audios: audios
+        });
+      });
+    };
 
     _proto.getVideoStream = function getVideoStream(options, video) {
       return new Promise(function (resolve, reject) {
@@ -784,7 +798,7 @@
                 });
               });
             });
-          } else if (audio.kind === 'videoplayer' || video.kind === 'videostream') {
+          } else if (audio.kind === 'videoplayer' || audio.kind === 'videostream') {
             var _element2 = document.querySelector('#' + audio.deviceId);
 
             _element2.crossOrigin = 'anonymous'; // element.oncanplay = () => {
@@ -924,6 +938,9 @@
     _proto.leaveChannel = function leaveChannel() {
       var _this9 = this;
 
+      this.patchState({
+        connecting: false
+      });
       var client = this.client;
       client.leave(function () {
         // console.log('Leave channel successfully');
@@ -987,6 +1004,12 @@
           });
         });
       } else {
+        if (this.state.spying) {
+          this.patchState({
+            spying: false
+          });
+        }
+
         this.sendRemoteControlRequest().then(function (control) {
           // console.log('AgoraService.sendRemoteControlRequest', control);
           _this10.patchState({
@@ -994,6 +1017,44 @@
           });
         });
       }
+    };
+
+    _proto.toggleSpy = function toggleSpy() {
+      var _this11 = this;
+
+      if (this.state.control) {
+        this.sendRemoteControlDismiss().then(function (control) {
+          _this11.patchState({
+            control: false
+          });
+
+          _this11.sendRemoteRequestInfo().then(function (info) {
+            _this11.patchState({
+              spying: true,
+              control: false
+            });
+          });
+        });
+      } else if (this.state.spying) {
+        this.patchState({
+          spying: false,
+          control: false
+        });
+      } else {
+        this.sendRemoteRequestInfo().then(function (info) {
+          _this11.patchState({
+            spying: true,
+            control: false
+          });
+        });
+      }
+    };
+
+    _proto.navToView = function navToView(viewId) {
+      this.sendMessage({
+        type: MessageType.NavToView,
+        viewId: viewId
+      });
     };
 
     _proto.getRemoteTargetUID = function getRemoteTargetUID() {
@@ -1010,10 +1071,10 @@
     };
 
     _proto.sendRemoteControlDismiss = function sendRemoteControlDismiss() {
-      var _this11 = this;
+      var _this12 = this;
 
       return new Promise(function (resolve, reject) {
-        _this11.sendMessage({
+        _this12.sendMessage({
           type: MessageType.RequestControlDismiss,
           rpcid: Date.now().toString()
         }).then(function (message) {
@@ -1028,10 +1089,10 @@
     };
 
     _proto.sendRemoteControlRequest = function sendRemoteControlRequest(message) {
-      var _this12 = this;
+      var _this13 = this;
 
       return new Promise(function (resolve, reject) {
-        _this12.sendMessage({
+        _this13.sendMessage({
           type: MessageType.RequestControl,
           rpcid: Date.now().toString()
         }).then(function (message) {
@@ -1051,6 +1112,23 @@
             resolve(true);
           } else if (message.type === MessageType.RequestControlRejected) {
             // this.remoteDeviceInfo = undefined
+            resolve(false);
+          }
+        });
+      });
+    };
+
+    _proto.sendRemoteRequestInfo = function sendRemoteRequestInfo(message) {
+      var _this14 = this;
+
+      return new Promise(function (resolve, reject) {
+        _this14.sendMessage({
+          type: MessageType.RequestInfo,
+          rpcid: Date.now().toString()
+        }).then(function (message) {
+          if (message.type === MessageType.RequestInfoResult) {
+            resolve(true);
+          } else {
             resolve(false);
           }
         });
@@ -1164,13 +1242,11 @@
 
       if (id !== this.state.uid) {
         stream.stop('agora_remote_' + id);
+        var video = document.querySelector('.video--remote');
 
-        var _video = document.querySelector('.video--remote');
-
-        if (_video) {
-          _video.classList.remove('playing');
-
-          _video.textContent = '';
+        if (video) {
+          video.classList.remove('playing');
+          video.textContent = '';
         }
       }
 
@@ -1184,12 +1260,11 @@
       var id = event.uid; // console.log('peer-leave id', id);
 
       if (id !== this.state.uid) {
-        var _video2 = document.querySelector('.video--remote');
+        var video = document.querySelector('.video--remote');
 
-        if (_video2) {
-          _video2.classList.remove('playing');
-
-          _video2.textContent = '';
+        if (video) {
+          video.classList.remove('playing');
+          video.textContent = '';
         }
 
         this.patchState({
@@ -1228,6 +1303,7 @@
   }(Emittable);
 
   var BASE_HREF = document.querySelector('base').getAttribute('href');
+  var DEBUG = false;
 
   var ModalEvent = function ModalEvent(data) {
     this.data = data;
@@ -1476,14 +1552,21 @@
             case MessageType.RequestControlAccepted:
               agora.sendMessage({
                 type: MessageType.NavToView,
-                id: _this.view.id
+                viewId: _this.view.id
               });
               break;
 
+            case MessageType.RequestInfoResult:
+              if (_this.controls.view.value !== message.viewId) {
+                _this.controls.view.value = message.viewId;
+              }
+
+              break;
+
             case MessageType.NavToView:
-              if (agora.state.locked && message.id) {
-                if (_this.controls.view.value !== message.id) {
-                  _this.controls.view.value = message.id;
+              if ((agora.state.locked || agora.state.spying) && message.viewId) {
+                if (_this.controls.view.value !== message.viewId) {
+                  _this.controls.view.value = message.viewId;
                 }
               }
 
@@ -1512,20 +1595,13 @@
         }).then(function (stream) {
           console.log('stream', stream);
 
-          {
-            _this2.agora.patchState({
-              mediaStatus: MediaStatus.Ready
-            });
-          }
+          _this2.agora.patchState({
+            mediaStatus: MediaStatus.Ready
+          });
         }).catch(function (error) {
           console.log('media error', error);
         });
       }
-    };
-
-    _proto.onPrevent = function onPrevent(event) {
-      event.preventDefault();
-      event.stopImmediatePropagation();
     };
 
     _proto.loadData = function loadData() {
@@ -1564,13 +1640,11 @@
         setTimeout(function () {
           _this4.view = view;
 
-          _this4.pushChanges();
+          _this4.pushChanges(); // !!!
 
-          if ( _this4.agora.state.control) {
-            _this4.agora.sendMessage({
-              type: MessageType.NavToView,
-              id: view.id
-            });
+
+          {
+            _this4.agora.navToView(view.id);
           }
         }, 1);
       });
@@ -1580,8 +1654,12 @@
       var _this5 = this;
 
       if (!this.state.connecting) {
-        this.state.connecting = true;
-        this.pushChanges();
+        var quality = this.agora.state.role === RoleType.Attendee ? StreamQualities[StreamQualities.length - 1] : StreamQualities[1]; // HD 1920
+
+        this.agora.patchState({
+          connecting: true,
+          quality: quality
+        });
         setTimeout(function () {
           _this5.agora.connect$().pipe(operators.takeUntil(_this5.unsubscribe$)).subscribe(function (state) {
             _this5.state = Object.assign(_this5.state, state);
@@ -1593,15 +1671,13 @@
     };
 
     _proto.disconnect = function disconnect() {
-      this.state.connecting = false;
-
       {
         this.agora.leaveChannel();
       }
     };
 
-    _proto.onChange = function onChange(index) {
-      if ( this.state.control) {
+    _proto.onSlideChange = function onSlideChange(index) {
+      {
         this.agora.sendMessage({
           type: MessageType.SlideChange,
           index: index
@@ -1609,28 +1685,9 @@
       }
     };
 
-    _proto.onNavTo = function onNavTo(id) {
-      // const view = this.data.views.find(x => x.id === id);
-      if (this.controls.view.value !== id) {
-        this.controls.view.value = id;
-      }
-      /*
-      if (!DEBUG && this.state.control) {
-      	this.agora.sendMessage({
-      		type: MessageType.SlideChange,
-      		index
-      	});
-      }
-      */
-
-    };
-
-    _proto.onRotate = function onRotate(coords) {
-      if ( this.state.control) {
-        this.agora.sendMessage({
-          type: MessageType.CameraRotate,
-          coords: coords
-        });
+    _proto.onNavTo = function onNavTo(viewId) {
+      if (this.controls.view.value !== viewId) {
+        this.controls.view.value = viewId;
       }
     };
 
@@ -1641,42 +1698,30 @@
         src: CONTROL_REQUEST,
         data: null
       }).pipe(operators.takeUntil(this.unsubscribe$)).subscribe(function (event) {
-        if (event instanceof ModalResolveEvent) {
-          message.type = MessageType.RequestControlAccepted;
-          _this6.state.locked = true;
-        } else {
-          message.type = MessageType.RequestControlRejected;
-          _this6.state.locked = false;
-        }
-
         {
+          if (event instanceof ModalResolveEvent) {
+            message.type = MessageType.RequestControlAccepted;
+            _this6.state.locked = true;
+          } else {
+            message.type = MessageType.RequestControlRejected;
+            _this6.state.locked = false;
+          }
+
           _this6.agora.sendMessage(message);
+
+          _this6.pushChanges();
         }
-
-        _this6.pushChanges();
       });
-    };
-
-    _proto.onDropped = function onDropped(id) {
-      console.log('AppComponent.onDropped', id);
-    };
-
-    _proto.parseQueryString = function parseQueryString() {
-      var action = LocationService.get('action');
-
-      switch (action) {
-        case 'login':
-          this.openLogin();
-          break;
-
-        case 'register':
-          this.openRegister();
-          break;
-      }
     } // onView() { const context = getContext(this); }
     // onChanges() {}
     // onDestroy() {}
     ;
+
+    _proto.patchState = function patchState(state) {
+      this.state = Object.assign({}, this.state, state);
+      this.pushChanges();
+      console.log(this.state);
+    };
 
     _proto.toggleCamera = function toggleCamera() {
       {
@@ -1696,6 +1741,12 @@
       }
     };
 
+    _proto.toggleSpy = function toggleSpy() {
+      {
+        this.agora.toggleSpy();
+      }
+    };
+
     _proto.addToWishlist = function addToWishlist() {
       if (!this.view.liked) {
         this.view.liked = true;
@@ -1710,6 +1761,11 @@
         data: this.view
       }).pipe(operators.takeUntil(this.unsubscribe$)).subscribe(function (event) {// this.pushChanges();
       });
+    };
+
+    _proto.onPrevent = function onPrevent(event) {
+      event.preventDefault();
+      event.stopImmediatePropagation();
     };
 
     return AppComponent;
@@ -56626,9 +56682,9 @@
       var hash = {};
       intersections.forEach(function (intersection, i) {
         var object = intersection.object;
-        key = object.id;
+        key = object.uuid;
 
-        if (i === 0 && InteractiveMesh.object != object) {
+        if (i === 0 && (InteractiveMesh.object != object || object.down !== down)) {
           InteractiveMesh.object = object;
           hit = object; // haptic feedback
         }
@@ -56636,11 +56692,11 @@
         hash[key] = intersection;
       });
       items.forEach(function (x) {
-        var intersection = hash[x.id]; // intersections.find(i => i.object === x);
+        var intersection = hash[x.uuid]; // intersections.find(i => i.object === x);
 
         x.intersection = intersection;
         x.over = intersection !== undefined;
-        x.down = down;
+        x.down = intersection !== undefined && down;
       });
       return hit;
     };
@@ -57480,7 +57536,7 @@
   });
 
   var VERTEX_SHADER = "\nvarying vec2 vUv;\nvoid main() {\n\tvUv = uv;\n\t// gl_PointSize = 8.0;\n\tgl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);\n}\n";
-  var FRAGMENT_SHADER = "\nvarying vec2 vUv;\nuniform vec2 resolution;\nuniform float pow;\nuniform sampler2D texture;\n\nvec3 ACESFilmicToneMapping_( vec3 color ) {\n\tcolor *= 1.8;\n\treturn saturate( ( color * ( 2.51 * color + 0.03 ) ) / ( color * ( 2.43 * color + 0.59 ) + 0.14 ) );\n}\n\nvec4 getColor(vec2 p) {\n\treturn texture2D(texture, p);\n}\n\nvec3 encodeColor(vec4 color) {\n\treturn ACESFilmicToneMapping_(RGBEToLinear(color).rgb);\n}\n\nfloat rand(vec2 co){\n    return fract(sin(dot(co.xy ,vec2(12.9898,78.233))) * 43758.5453);\n}\n\nvec4 Blur(vec2 st, vec4 color) {\n\tconst float directions = 16.0;\n\tconst float quality = 3.0;\n\tfloat size = 16.0;\n\tconst float PI2 = 6.28318530718;\n\tconst float qq = 1.0;\n\tconst float q = 1.0 / quality;\n\tvec2 radius = size / resolution.xy;\n\tfor (float d = 0.0; d < PI2; d += PI2 / directions) {\n\t\tfor (float i = q; i <= qq; i += q) {\n\t\t\tvec2 dUv = vec2(cos(d), sin(d)) * radius * i;\n\t\t\tcolor += getColor(st + dUv);\n        }\n\t}\n\treturn color /= quality * directions - 15.0 + rand(st) * 4.0;\n}\n\nvoid main() {\n\tvec4 color = texture2D(texture, vUv);\n\t// color = Blur(vUv, color);\n\t#ifdef RGBE\n\t\tcolor = vec4(encodeColor(color) * pow + rand(vUv) * 0.05, 1.0);\n\t#else\n\t\tcolor = vec4(color.rgb * pow + rand(vUv) * 0.05, 1.0);\n\t#endif\n\tgl_FragColor = color;\n}\n";
+  var FRAGMENT_SHADER = "\nvarying vec2 vUv;\nuniform vec2 resolution;\nuniform float pow;\nuniform bool rgbe;\nuniform sampler2D texture;\n\nvec3 ACESFilmicToneMapping_( vec3 color ) {\n\tcolor *= 1.8;\n\treturn saturate( ( color * ( 2.51 * color + 0.03 ) ) / ( color * ( 2.43 * color + 0.59 ) + 0.14 ) );\n}\n\nvec4 getColor(vec2 p) {\n\treturn texture2D(texture, p);\n}\n\nvec3 encodeColor(vec4 color) {\n\treturn ACESFilmicToneMapping_(RGBEToLinear(color).rgb);\n}\n\nfloat rand(vec2 co){\n    return fract(sin(dot(co.xy ,vec2(12.9898,78.233))) * 43758.5453);\n}\n\nvec4 Blur(vec2 st, vec4 color) {\n\tconst float directions = 16.0;\n\tconst float quality = 3.0;\n\tfloat size = 16.0;\n\tconst float PI2 = 6.28318530718;\n\tconst float qq = 1.0;\n\tconst float q = 1.0 / quality;\n\tvec2 radius = size / resolution.xy;\n\tfor (float d = 0.0; d < PI2; d += PI2 / directions) {\n\t\tfor (float i = q; i <= qq; i += q) {\n\t\t\tvec2 dUv = vec2(cos(d), sin(d)) * radius * i;\n\t\t\tcolor += getColor(st + dUv);\n        }\n\t}\n\treturn color /= quality * directions - 15.0 + rand(st) * 4.0;\n}\n\nvoid main() {\n\tvec4 color = texture2D(texture, vUv);\n\t// color = Blur(vUv, color);\n\tif (rgbe) {\n\t\tcolor = vec4(encodeColor(color) * pow + rand(vUv) * 0.05, 1.0);\n\t} else {\n\t\tcolor = vec4(color.rgb * pow + rand(vUv) * 0.05, 1.0);\n\t}\n\tgl_FragColor = color;\n}\n";
 
   var Panorama = /*#__PURE__*/function () {
     function Panorama() {
@@ -57507,6 +57563,9 @@
           },
           pow: {
             value: 0
+          },
+          rgbe: {
+            value: false
           }
         }
       });
@@ -57558,9 +57617,7 @@
         material.uniforms.texture.value = texture;
         material.uniforms.resolution.value = new THREE$1.Vector2(texture.width, texture.height);
         material.uniforms.pow.value = 0;
-        material.uniforms.defines = {
-          RGBE: rgbe
-        }; // console.log(texture.width, texture.height);
+        material.uniforms.rgbe.value = rgbe; // console.log(texture.width, texture.height);
 
         material.needsUpdate = true;
         gsap.to(_this2, 0.5, {
@@ -57678,6 +57735,7 @@
         height: 0,
         aspect: 0
       };
+      this.mouse = new THREE$1.Vector2();
       var container = this.container = node;
       var info = this.info = node.querySelector('.world__info');
       var worldRect = this.worldRect = Rect.fromNode(container);
@@ -57814,17 +57872,26 @@
     _proto.setView = function setView() {
       var _this2 = this;
 
-      if (this.orbit) {
-        this.orbit.setOrientation(this.view.orientation);
-      }
+      var view = this.view_;
 
-      if (this.panorama) {
-        this.panorama.swap(this.view, this.renderer, function (envMap, texture, rgbe) {
-          // this.scene.background = envMap;
-          _this2.scene.environment = envMap;
-          _this2.torus.material.envMap = envMap;
-          _this2.torus.material.needsUpdate = true; // this.render();
-        });
+      if (view) {
+        if (this.orbit) {
+          if (this.infoResultMessage) {
+            this.infoResultMessage = null;
+            this.orbit.setOrientation(this.infoResultMessage.orientation);
+          } else {
+            this.orbit.setOrientation(view.orientation);
+          }
+        }
+
+        if (this.panorama) {
+          this.panorama.swap(view, this.renderer, function (envMap, texture, rgbe) {
+            // this.scene.background = envMap;
+            _this2.scene.environment = envMap;
+            _this2.torus.material.envMap = envMap;
+            _this2.torus.material.needsUpdate = true; // this.render();
+          });
+        }
       }
     };
 
@@ -57975,34 +58042,8 @@
       this.navTo.next(event.navTo);
     };
 
-    _proto.drag$_ = function drag$_() {
-      var _this3 = this;
-
-      var rotation;
-      return DragService.events$(this.node).pipe(operators.tap(function (event) {
-        var panorama = _this3.panorama;
-
-        if (event instanceof DragDownEvent) {
-          rotation = panorama.mesh.rotation.clone();
-        } else if (event instanceof DragMoveEvent) {
-          _this3.panorama.mesh.rotation.set(rotation.x + event.distance.y * 0.01, rotation.y + event.distance.x * 0.01 + Math.PI, 0); // this.render();
-          // this.rotate.next([panorama.x, panorama.y, panorama.z]);
-
-          /*
-          if (this.agora && this.agora.state.control) {
-          	this.agora.sendMessage({
-          		type: MessageType.CameraRotate,
-          		coords: [panorama.x, panorama.y, group.rotation.z]
-          	});
-          }
-          */
-
-        }
-      }));
-    };
-
     _proto.drag$ = function drag$() {
-      var _this4 = this;
+      var _this3 = this;
 
       var rotation;
       return DragService.events$(this.node).pipe(operators.tap(function (event) {
@@ -58010,13 +58051,12 @@
         if (event instanceof DragDownEvent) ; else if (event instanceof DragMoveEvent) {
           group.rotation.set(rotation.x + event.distance.y * 0.01, rotation.y + event.distance.x * 0.01, 0);
 
-          _this4.panorama.mesh.rotation.set(rotation.x + event.distance.y * 0.01, rotation.y + event.distance.x * 0.01 + Math.PI, 0);
+          _this3.panorama.mesh.rotation.set(rotation.x + event.distance.y * 0.01, rotation.y + event.distance.x * 0.01 + Math.PI, 0);
 
-          _this4.render(); // this.rotate.next([group.rotation.x, group.rotation.y, group.rotation.z]);
+          _this3.render();
 
-
-          if (_this4.agora && _this4.agora.state.control) {
-            _this4.agora.sendMessage({
+          if (_this3.agora && _this3.agora.state.control) {
+            _this3.agora.sendMessage({
               type: MessageType.CameraRotate,
               coords: [group.rotation.x, group.rotation.y, group.rotation.z]
             });
@@ -58028,9 +58068,9 @@
     _proto.onTween = function onTween() {// this.render();
     };
 
-    _proto.onChange = function onChange(index) {
+    _proto.onSlideChange = function onSlideChange(index) {
       this.index = index;
-      this.change.next(index);
+      this.slideChange.next(index);
     };
 
     _proto.updateRaycaster = function updateRaycaster() {
@@ -58179,18 +58219,21 @@
         */
         var w2 = this.size.width / 2;
         var h2 = this.size.height / 2;
-        this.mouse = {
-          x: (event.clientX - w2) / w2,
-          y: -(event.clientY - h2) / h2
-        };
+        this.mouse.x = (event.clientX - w2) / w2;
+        this.mouse.y = -(event.clientY - h2) / h2;
         var raycaster = this.raycaster;
         raycaster.setFromCamera(this.mouse, this.camera);
         var hit = InteractiveMesh.hittest(raycaster, true);
 
         if (hit) {
-          console.log('onMouseDown.hit', hit);
-
-          if (hit === this.panorama.mesh) {} else {// controllers.feedback();
+          if (hit === this.panorama.mesh) {
+            if (DEBUG) {
+              var position = new THREE$1.Vector3().copy(hit.intersection.point).normalize();
+              console.log(JSON.stringify({
+                position: position.toArray()
+              }));
+            }
+          } else {// controllers.feedback();
             // if (Tone.context.state === 'running') {
             // 	const feedback = this.feedback = (this.feedback || new Tone.Player('audio/feedback.mp3').toMaster());
             // 	feedback.start();
@@ -58206,10 +58249,8 @@
       try {
         var w2 = this.size.width / 2;
         var h2 = this.size.height / 2;
-        this.mouse = {
-          x: (event.clientX - w2) / w2,
-          y: -(event.clientY - h2) / h2
-        };
+        this.mouse.x = (event.clientX - w2) / w2;
+        this.mouse.y = -(event.clientY - h2) / h2;
         /*
         if (TEST_ENABLED) {
         	return this.controllers.updateTest(this.mouse);
@@ -58245,7 +58286,7 @@
     };
 
     _proto.addListeners = function addListeners() {
-      var _this5 = this;
+      var _this4 = this;
 
       this.resize = this.resize.bind(this);
       this.render = this.render.bind(this);
@@ -58264,14 +58305,14 @@
 
       var vrService = this.vrService = VRService.getService();
       vrService.session$.pipe(operators.takeUntil(this.unsubscribe$)).subscribe(function (session) {
-        return _this5.renderer.xr.setSession(session);
+        return _this4.renderer.xr.setSession(session);
       });
       this.orbit.observe$().pipe(operators.takeUntil(this.unsubscribe$)).subscribe(function (event) {
-        // this.render();
-        if (_this5.agora) {
-          _this5.agora.sendMessage({
-            type: MessageType.CameraRotate,
-            coords: [_this5.camera.position.x, _this5.camera.position.y, _this5.camera.position.z]
+
+        if (_this4.agora) {
+          _this4.agora.sendMessage({
+            type: MessageType.CameraOrientation,
+            orientation: _this4.orbit.getOrientation()
           });
         }
       });
@@ -58289,9 +58330,33 @@
         });
         agora.message$.pipe(operators.takeUntil(this.unsubscribe$)).subscribe(function (message) {
           switch (message.type) {
+            case MessageType.RequestInfo:
+              message.type = MessageType.RequestInfoResult;
+              message.viewId = _this4.view.id;
+              message.orientation = _this4.orbit.getOrientation();
+              agora.sendMessage(message);
+              break;
+
+            case MessageType.RequestInfoResult:
+              if (message.viewId === _this4.view.id) {
+                _this4.orbit.setOrientation(message.orientation);
+              } else {
+                _this4.infoResultMessage = message;
+              }
+
+              break;
+
+            case MessageType.CameraOrientation:
+              if (agora.state.locked || agora.state.spying) {
+                _this4.orbit.setOrientation(message.orientation); // this.render();
+
+              }
+
+              break;
+
             case MessageType.CameraRotate:
-              if ((agora.state.locked || agora.state.role === RoleType.Publisher) && message.coords) {
-                var camera = _this5.camera;
+              if (agora.state.locked || agora.state.spying) {
+                var camera = _this4.camera;
                 camera.position.set(message.coords[0], message.coords[1], message.coords[2]);
                 camera.lookAt(ORIGIN); // this.render();
               }
@@ -58300,7 +58365,7 @@
           }
         });
         agora.state$.pipe(operators.takeUntil(this.unsubscribe$)).subscribe(function (state) {
-          _this5.state = state; // console.log(state);
+          _this4.state = state; // console.log(state);
           // this.pushChanges();
         });
       }
@@ -58334,10 +58399,7 @@
       set: function set(view) {
         if (this.view_ !== view) {
           this.view_ = view;
-
-          if (view) {
-            this.setView();
-          }
+          this.setView();
         }
       }
     }]);
@@ -58347,7 +58409,7 @@
   WorldComponent.meta = {
     selector: '[world]',
     inputs: ['view'],
-    outputs: ['change', 'rotate', 'navTo']
+    outputs: ['slideChange', 'navTo']
   };
 
   var deg = THREE$1.Math.degToRad;

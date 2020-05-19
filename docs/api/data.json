@@ -16,11 +16,47 @@
           "title": "Kitchen 02",
           "abstract": "Abstract",
           "position": [
-            -124.29046901090334,
-            -112.9935452521287,
-            470.109251736104
+            0.5554038916015188,
+            -0.3047905538856642,
+            0.7737113385856244
           ],
           "navTo": 2
+        },
+        {
+          "id": 12,
+          "type": "nav",
+          "title": "Kitchen 03",
+          "abstract": "Abstract",
+          "position": [
+            0.38873046523452154,
+            -0.14819409336721764,
+            0.9093553409364356
+          ],
+          "navTo": 3
+        },
+        {
+          "id": 13,
+          "type": "nav",
+          "title": "Kitchen 04",
+          "abstract": "Abstract",
+          "position": [
+            -0.14688247897969064,
+            -0.14635017708124282,
+            0.9782674292017852
+          ],
+          "navTo": 4
+        },
+        {
+          "id": 14,
+          "type": "nav",
+          "title": "Mostra 01",
+          "abstract": "Abstract",
+          "position": [
+            -0.3617832939341157,
+            -0.232928541436513,
+            0.9026943795185832
+          ],
+          "navTo": 5
         }
       ],
       "orientation": {
@@ -41,19 +77,55 @@
         {
           "id": 21,
           "type": "nav",
+          "title": "Kitchen 01",
+          "abstract": "Abstract",
+          "position": [
+            -0.8703133087098993,
+            -0.42390236970813877,
+            -0.25072200868342626
+          ],
+          "navTo": 1
+        },
+        {
+          "id": 22,
+          "type": "nav",
           "title": "Kitchen 03",
           "abstract": "Abstract",
           "position": [
-            -124.29046901090334,
-            -112.9935452521287,
-            470.109251736104
+            0.11584666848949339,
+            -0.21541997661968337,
+            0.969625589118326
           ],
           "navTo": 3
+        },
+        {
+          "id": 23,
+          "type": "nav",
+          "title": "Kitchen 04",
+          "abstract": "Abstract",
+          "position": [
+            -0.46288166298120587,
+            -0.19885132358883986,
+            0.8638279442011122
+          ],
+          "navTo": 4
+        },
+        {
+          "id": 14,
+          "type": "nav",
+          "title": "Mostra 01",
+          "abstract": "Abstract",
+          "position": [
+            -0.6666804421448888,
+            -0.26491927754833555,
+            0.6966742168652171
+          ],
+          "navTo": 5
         }
       ],
       "orientation": {
-        "latitude": -4.1,
-        "longitude": 88
+        "latitude": -20.100000000000005,
+        "longitude": 179.8
       }
     },
     {
@@ -69,19 +141,55 @@
         {
           "id": 31,
           "type": "nav",
+          "title": "Kitchen 01",
+          "abstract": "Abstract",
+          "position": [
+            -0.6775023449332943,
+            -0.24427547940728414,
+            -0.6937723421773377
+          ],
+          "navTo": 1
+        },
+        {
+          "id": 32,
+          "type": "nav",
+          "title": "Kitchen 02",
+          "abstract": "Abstract",
+          "position": [
+            -0.21386136071921605,
+            -0.40229394303539145,
+            -0.8901813870152322
+          ],
+          "navTo": 2
+        },
+        {
+          "id": 33,
+          "type": "nav",
+          "title": "Kitchen 04",
+          "abstract": "Abstract",
+          "position": [
+            -0.9368742924845852,
+            -0.30404319386678996,
+            0.1726971231514575
+          ],
+          "navTo": 4
+        },
+        {
+          "id": 34,
+          "type": "nav",
           "title": "Mostra 01",
           "abstract": "Abstract",
           "position": [
-            -124.29046901090334,
-            -112.9935452521287,
-            470.109251736104
+            -0.9507002527461537,
+            -0.29767987379782945,
+            0.08692365710270128
           ],
-          "navTo": 4
+          "navTo": 5
         }
       ],
       "orientation": {
-        "latitude": -4.1,
-        "longitude": 88
+        "latitude": -28.6,
+        "longitude": 83.1
       }
     },
     {
@@ -95,21 +203,57 @@
       "envMapFile": "Kitchen-4.jpg",
       "items": [
         {
-          "id": 41,
+          "id": 31,
+          "type": "nav",
+          "title": "Kitchen 01",
+          "abstract": "Abstract",
+          "position": [
+            -0.04722904764548762,
+            -0.4220415702050294,
+            -0.9053454203105981
+          ],
+          "navTo": 1
+        },
+        {
+          "id": 32,
+          "type": "nav",
+          "title": "Kitchen 02",
+          "abstract": "Abstract",
+          "position": [
+            0.7097231724375945,
+            -0.27343904745629816,
+            -0.6492488781902581
+          ],
+          "navTo": 2
+        },
+        {
+          "id": 33,
+          "type": "nav",
+          "title": "Kitchen 03",
+          "abstract": "Abstract",
+          "position": [
+            0.8594255802870656,
+            -0.2881487976615867,
+            0.42232445152326026
+          ],
+          "navTo": 3
+        },
+        {
+          "id": 34,
           "type": "nav",
           "title": "Mostra 01",
           "abstract": "Abstract",
           "position": [
-            -124.29046901090334,
-            -112.9935452521287,
-            470.109251736104
+            -0.5731157530449438,
+            -0.5463942694245818,
+            0.6107304118444605
           ],
           "navTo": 5
         }
       ],
       "orientation": {
-        "latitude": -4.1,
-        "longitude": 88
+        "latitude": -27.499999999999993,
+        "longitude": 76.39999999999998
       }
     },
     {
@@ -153,7 +297,7 @@
         {
           "id": 61,
           "type": "nav",
-          "title": "Square",
+          "title": "Old Depot",
           "abstract": "Abstract",
           "position": [
             -265.3058462058933,
@@ -171,22 +315,22 @@
     {
       "id": 7,
       "type": "panorama",
-      "name": "Square",
+      "name": "Old Depot",
       "likes": 175,
       "liked": false,
       "ar": "models/worn_brown_boots.usdz",
-      "envMapFolder": "video/",
-      "envMapFile": "Square.mp4",
+      "envMapFolder": "equirectangular/",
+      "envMapFile": "old_depot_2k.hdr",
       "items": [
         {
           "id": 71,
           "type": "nav",
-          "title": "Garden",
+          "title": "Square",
           "abstract": "Abstract",
           "position": [
-            -265.3058462058933,
-            -160.4825267081394,
-            391.30946337019196
+            -0.552684304525924,
+            -0.05134015933951605,
+            0.8318078188918935
           ],
           "navTo": 8
         }
@@ -199,6 +343,34 @@
     {
       "id": 8,
       "type": "panorama",
+      "name": "Square",
+      "likes": 175,
+      "liked": false,
+      "ar": "models/worn_brown_boots.usdz",
+      "envMapFolder": "video/",
+      "envMapFile": "Square.mp4",
+      "items": [
+        {
+          "id": 81,
+          "type": "nav",
+          "title": "Garden",
+          "abstract": "Abstract",
+          "position": [
+            -0.15644789925908917,
+            -0.0013182015249417318,
+            0.9876853330702838
+          ],
+          "navTo": 9
+        }
+      ],
+      "orientation": {
+        "latitude": -8,
+        "longitude": 90
+      }
+    },
+    {
+      "id": 9,
+      "type": "panorama",
       "name": "Garden",
       "likes": 235,
       "liked": false,
@@ -207,14 +379,14 @@
       "envMapFile": "Garden.mp4",
       "items": [
         {
-          "id": 81,
+          "id": 91,
           "type": "nav",
           "title": "Kitchen 01",
           "abstract": "Abstract",
           "position": [
-            -265.3058462058933,
-            -160.4825267081394,
-            391.30946337019196
+            0.04713776229380867,
+            -0.16372888464057858,
+            0.9853785484270928
           ],
           "navTo": 1
         }

@@ -16,6 +16,7 @@ const FRAGMENT_SHADER = `
 varying vec2 vUv;
 uniform vec2 resolution;
 uniform float pow;
+uniform bool rgbe;
 uniform sampler2D texture;
 
 vec3 ACESFilmicToneMapping_( vec3 color ) {
@@ -55,11 +56,11 @@ vec4 Blur(vec2 st, vec4 color) {
 void main() {
 	vec4 color = texture2D(texture, vUv);
 	// color = Blur(vUv, color);
-	#ifdef RGBE
+	if (rgbe) {
 		color = vec4(encodeColor(color) * pow + rand(vUv) * 0.05, 1.0);
-	#else
+	} else {
 		color = vec4(color.rgb * pow + rand(vUv) * 0.05, 1.0);
-	#endif
+	}
 	gl_FragColor = color;
 }
 `;
@@ -82,6 +83,7 @@ export default class Panorama {
 				texture: { type: "t", value: null },
 				resolution: { value: new THREE.Vector2() },
 				pow: { value: 0 },
+				rgbe: { value: false },
 			},
 		});
 		/*
@@ -126,9 +128,7 @@ export default class Panorama {
 			material.uniforms.texture.value = texture;
 			material.uniforms.resolution.value = new THREE.Vector2(texture.width, texture.height);
 			material.uniforms.pow.value = 0;
-			material.uniforms.defines = {
-				RGBE: rgbe
-			};
+			material.uniforms.rgbe.value = rgbe;
 			// console.log(texture.width, texture.height);
 			material.needsUpdate = true;
 			gsap.to(this, 0.5, {

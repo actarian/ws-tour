@@ -213,14 +213,23 @@ body {
 .video {
 	border-radius: 12px;
 	overflow: hidden;
-	// background: white;
 	background: transparent;
-	border: 2px solid rgba(0, 153, 255, 0.4);
+	border: 2px solid rgba(0, 0, 0, 0.1);
+	// border: 2px solid rgba(0, 153, 255, 0.4);
 
 	&.playing {
 		border-color: transparent;
 	}
 }
+
+/*
+.video--local,
+.video--remote {
+	&.disabled {
+		visibility: hidden;
+	}
+}
+*/
 
 @mixin ratio($width, $ratio) {
 	width: $width;
@@ -247,9 +256,14 @@ body {
 	}
 }
 
+.btn--spy,
 .btn--control {
 	@extend %btn-circle;
-	margin-left: 140px;
+
+	svg {
+		width: 28px;
+		height: 28px;
+	}
 
 	&,
 	&:active,
@@ -257,11 +271,11 @@ body {
 	&:hover,
 	&:visited {
 		border: 2px solid rgba($foreground, 0.2);
-		background: white;
-		color: $foreground;
+		background: rgb(0, 153, 255);
+		color: $foreground-negative;
 
 		svg {
-			color: $foreground;
+			fill: $foreground-negative;
 		}
 	}
 
@@ -285,6 +299,15 @@ body {
 			}
 		}
 	}
+}
+
+.btn--spy {
+	margin-left: 80px;
+}
+
+.btn--control {
+	// margin-left: 140px;
+	margin-left: 10px;
 }
 
 .btn--cam,
@@ -356,13 +379,6 @@ body {
 
 	&.muted {
 		opacity: 0.2;
-	}
-}
-
-.video--local,
-.video--remote {
-	&.disabled {
-		visibility: hidden;
 	}
 }
 

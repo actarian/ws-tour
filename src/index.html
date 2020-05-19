@@ -27,6 +27,9 @@
 			</form>
 		</div>
 		<div class="group--local" [class]="{ publisher: state.role == 'publisher' }">
+			<button type="button" class="btn--spy" [class]="{ active: state.spying }" (click)="toggleSpy($event)" *if="state.role == 'publisher'">
+				<svg width="24" height="24" viewBox="0 0 24 24"><use xlink:href="#spy"></use></svg>
+			</button>
 			<button type="button" class="btn--control" [class]="{ active: state.control }" (click)="toggleControl($event)" *if="state.role == 'publisher'">
 				<svg width="24" height="24" viewBox="0 0 24 24"><use xlink:href="#gamepad"></use></svg>
 			</button>
@@ -35,7 +38,7 @@
 	</div>
 
 	<div class="ui__body">
-		<div class="world" world [view]="view" (rotate)="onRotate($event)" (change)="onChange($event)" (navTo)="onNavTo($event)">
+		<div class="world" world [view]="view" (slideChange)="onSlideChange($event)" (navTo)="onNavTo($event)">
 			<div class="world__view" *if="view">
 				<div class="world__item" *for="let item of view.items; let index = index;">
 					<div model-nav [item]="item" (over)="onNavOver($event)" (out)="onNavOut($event)" (down)="onNavDown($event)" *if="item.type == 'nav'"></div>
