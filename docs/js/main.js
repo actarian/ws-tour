@@ -629,19 +629,16 @@
         }
 
         {
-          _this4.detectDevices(function (devices) {
-            var video = devices.videos.length ? devices.videos[0] : null;
-            var audio = devices.audios.length ? devices.audios[0] : null;
-
-            _this4.createMediaStream(uid, video, audio);
-            /*
-            const cameraId = devices.videos.length ? devices.videos[0].deviceId : null;
-            const microphoneId = devices.audios.length ? devices.audios[0].deviceId : null;
-            this.createLocalStream(uid, microphoneId, cameraId);
-            */
-
-          });
+          _this4.state.devices.video = _this4.state.devices.videos[0] || null;
+          _this4.state.devices.audio = _this4.state.devices.audios[0] || null;
+          /*
+          const cameraId = devices.videos.length ? devices.videos[0].deviceId : null;
+          const microphoneId = devices.audios.length ? devices.audios[0].deviceId : null;
+          this.createLocalStream(uid, microphoneId, cameraId);
+          */
         }
+
+        _this4.createMediaStream(uid, _this4.state.devices.video, _this4.state.devices.audio);
       }, function (error) {
         console.log('Join channel failed', error);
       }); // https://console.agora.io/invite?sign=YXBwSWQlM0RhYjQyODlhNDZjZDM0ZGE2YTYxZmQ4ZDY2Nzc0YjY1ZiUyNm5hbWUlM0RaYW1wZXR0aSUyNnRpbWVzdGFtcCUzRDE1ODY5NjM0NDU=// join link expire in 30 minutes
@@ -1579,7 +1576,12 @@
 
           _this.pushChanges();
         });
-        this.checkCamera();
+        agora.devices$().subscribe(function (devices) {
+          agora.patchState({
+            devices: devices,
+            mediaStatus: devices.videos.length || devices.audios.length ? MediaStatus.Ready : MediaStatus.Unavalable
+          });
+        }); // this.checkCamera();
       }
 
       this.loadData();

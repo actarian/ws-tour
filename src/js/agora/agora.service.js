@@ -309,19 +309,15 @@ export default class AgoraService extends Emittable {
 				});
 			}
 			if (USE_AUTODETECT) {
-				this.detectDevices((devices) => {
-					const video = devices.videos.length ? devices.videos[0] : null;
-					const audio = devices.audios.length ? devices.audios[0] : null;
-					this.createMediaStream(uid, video, audio);
-					/*
-					const cameraId = devices.videos.length ? devices.videos[0].deviceId : null;
-					const microphoneId = devices.audios.length ? devices.audios[0].deviceId : null;
-					this.createLocalStream(uid, microphoneId, cameraId);
-					*/
-				});
-			} else {
-				this.createMediaStream(uid, this.state.devices.video, this.state.devices.audio);
+				this.state.devices.video = this.state.devices.videos[0] || null;
+				this.state.devices.audio = this.state.devices.audios[0] || null;
+				/*
+				const cameraId = devices.videos.length ? devices.videos[0].deviceId : null;
+				const microphoneId = devices.audios.length ? devices.audios[0].deviceId : null;
+				this.createLocalStream(uid, microphoneId, cameraId);
+				*/
 			}
+			this.createMediaStream(uid, this.state.devices.video, this.state.devices.audio);
 		}, (error) => {
 			console.log('Join channel failed', error);
 		});

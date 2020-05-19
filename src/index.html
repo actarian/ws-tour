@@ -5,8 +5,8 @@
 <div class="ui" *if="!state.connected">
 	<div class="group--info">
 		<div class="info" *if="state.mediaStatus === 'waiting'">ricerca camera e microfono...</div>
-		<div class="info" *if="state.mediaStatus === 'ready'">camera e microfono connessi</div>
-		<div class="info" *if="state.mediaStatus === 'unavailable'">camera o microfono non disponibili</div>
+		<div class="info" *if="state.mediaStatus === 'ready'">camera o microfono connessi</div>
+		<div class="info" *if="state.mediaStatus === 'unavailable'">camera e microfono non disponibili</div>
 		<button type="button" class="btn--connect" [class]="{ disabled: state.mediaStatus !== 'ready' }" (click)="state.mediaStatus === 'ready' && connect()">
 			<svg width="24" height="24" viewBox="0 0 24 24"><use xlink:href="#call"></use></svg>
 			<span *if="!state.connecting">Entra</span>
