@@ -119,7 +119,7 @@ export default class AppComponent extends Component {
 		form.changes$.pipe(
 			takeUntil(this.unsubscribe$)
 		).subscribe((changes) => {
-			// console.log('form.changes$', changes, form.valid);
+			console.log('form.changes$', changes, form.valid);
 			const view = data.views.find(x => x.id === changes.view);
 			this.view = null;
 			this.pushChanges();

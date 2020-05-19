@@ -1633,7 +1633,7 @@
       var controls = this.controls = form.controls;
       controls.view.options = data.views;
       form.changes$.pipe(operators.takeUntil(this.unsubscribe$)).subscribe(function (changes) {
-        // console.log('form.changes$', changes, form.valid);
+        console.log('form.changes$', changes, form.valid);
         var view = data.views.find(function (x) {
           return x.id === changes.view;
         });
