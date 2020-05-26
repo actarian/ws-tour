@@ -1583,7 +1583,8 @@
             devices: devices,
             mediaStatus: devices.videos.length || devices.audios.length ? MediaStatus.Ready : MediaStatus.Unavalable
           });
-        }); // this.checkCamera();
+        });
+        this.checkCamera();
       }
 
       this.loadData();

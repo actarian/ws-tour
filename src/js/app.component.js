@@ -65,7 +65,7 @@ export default class AppComponent extends Component {
 			agora.devices$().subscribe(devices => {
 				agora.patchState({ devices, mediaStatus: (devices.videos.length || devices.audios.length) ? MediaStatus.Ready : MediaStatus.Unavalable });
 			});
-			// this.checkCamera();
+			this.checkCamera();
 		} else {
 			const role = LocationService.get('role') || RoleType.Attendee;
 			this.state = {
