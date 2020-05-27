@@ -57440,7 +57440,9 @@
     function EnvMapLoader() {}
 
     EnvMapLoader.load = function load(item, renderer, callback) {
-      if (item.envMapFile.indexOf('.hdr') !== -1) {
+      if (item.envMapFile === 'publisherStream') {
+        return this.loadPublisherStreamBackground(renderer, callback);
+      } else if (item.envMapFile.indexOf('.hdr') !== -1) {
         return this.loadRgbeBackground(BASE_HREF + environment.paths.textures + item.envMapFolder, item.envMapFile, renderer, callback);
       } else if (item.envMapFile.indexOf('.mp4') !== -1) {
         return this.loadVideoBackground(BASE_HREF + environment.paths.textures + item.envMapFolder, item.envMapFile, renderer, callback);
@@ -57465,6 +57467,45 @@
         }
       });
       return loader;
+    };
+
+    EnvMapLoader.loadPublisherStreamBackground = function loadPublisherStreamBackground(renderer, callback) {
+      var agora = AgoraService.getSingleton();
+      var target = agora.state.role === RoleType.Publisher ? '.video--local' : '.video--remote';
+      var video = document.querySelector(target + " video");
+
+      if (!video) {
+        return;
+      }
+
+      var onPlaying = function onPlaying() {
+        var texture = new THREE$1.VideoTexture(video);
+        texture.minFilter = THREE$1.LinearFilter;
+        texture.magFilter = THREE$1.LinearFilter;
+        texture.format = THREE$1.RGBFormat;
+        texture.needsUpdate = true;
+        var cubeRenderTarget = new THREE$1.WebGLCubeRenderTarget(1024, {
+          generateMipmaps: true,
+          // minFilter: THREE.LinearMipmapLinearFilter,
+          minFilter: THREE$1.LinearFilter,
+          magFilter: THREE$1.LinearFilter,
+          format: THREE$1.RGBFormat
+        }).fromEquirectangularTexture(renderer, texture); // texture.dispose();
+
+        if (typeof callback === 'function') {
+          callback(cubeRenderTarget.texture, texture, false);
+        }
+      };
+
+      video.crossOrigin = 'anonymous';
+
+      if (video.readyState >= video.HAVE_FUTURE_DATA) {
+        onPlaying();
+      } else {
+        video.oncanplay = function () {
+          onPlaying();
+        };
+      }
     };
 
     EnvMapLoader.loadVideoBackground = function loadVideoBackground(path, file, renderer, callback) {

@@ -1,12 +1,15 @@
 import * as THREE from 'three';
 import { RGBELoader } from 'three/examples/jsm/loaders/RGBELoader.js';
 import { environment } from '../../../environment/environment';
+import AgoraService, { RoleType } from '../../agora/agora.service';
 import { BASE_HREF } from '../../const';
 
 export class EnvMapLoader {
 
 	static load(item, renderer, callback) {
-		if (item.envMapFile.indexOf('.hdr') !== -1) {
+		if (item.envMapFile === 'publisherStream') {
+			return this.loadPublisherStreamBackground(renderer, callback);
+		} else if (item.envMapFile.indexOf('.hdr') !== -1) {
 			return this.loadRgbeBackground(BASE_HREF + environment.paths.textures + item.envMapFolder, item.envMapFile, renderer, callback);
 		} else if (item.envMapFile.indexOf('.mp4') !== -1) {
 			return this.loadVideoBackground(BASE_HREF + environment.paths.textures + item.envMapFolder, item.envMapFile, renderer, callback);
@@ -32,6 +35,44 @@ export class EnvMapLoader {
 				}
 			});
 		return loader;
+	}
+
+	static loadPublisherStreamBackground(renderer, callback) {
+		const agora = AgoraService.getSingleton();
+		const target = agora.state.role === RoleType.Publisher ? '.video--local' : '.video--remote';
+		const video = document.querySelector(`${target} video`);
+		if (!video) {
+			return;
+		}
+		let videoReady = false;
+		const onPlaying = () => {
+			const texture = new THREE.VideoTexture(video);
+			texture.minFilter = THREE.LinearFilter;
+			texture.magFilter = THREE.LinearFilter;
+			texture.format = THREE.RGBFormat;
+			texture.needsUpdate = true;
+			const cubeRenderTarget = new THREE.WebGLCubeRenderTarget(1024, {
+				generateMipmaps: true,
+				// minFilter: THREE.LinearMipmapLinearFilter,
+				minFilter: THREE.LinearFilter,
+				magFilter: THREE.LinearFilter,
+				format: THREE.RGBFormat
+			}).fromEquirectangularTexture(renderer, texture);
+			// texture.dispose();
+			if (typeof callback === 'function') {
+				callback(cubeRenderTarget.texture, texture, false);
+			}
+		};
+		video.crossOrigin = 'anonymous';
+		if (video.readyState >= video.HAVE_FUTURE_DATA) {
+			videoReady = true;
+			onPlaying();
+		} else {
+			video.oncanplay = () => {
+				videoReady = true;
+				onPlaying();
+			};
+		}
 	}
 
 	static loadVideoBackground(path, file, renderer, callback) {
