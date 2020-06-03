@@ -747,9 +747,10 @@
       if (this.client) {
         next();
       } // console.log('agora rtc sdk version: ' + AgoraRTC.VERSION + ' compatible: ' + AgoraRTC.checkSystemRequirements());
+      // AgoraRTC.Logger.setLogLevel(AgoraRTC.Logger.ERROR);
 
 
-      AgoraRTC.Logger.setLogLevel(AgoraRTC.Logger.ERROR);
+      AgoraRTC.Logger.setLogLevel(AgoraRTC.Logger.NONE);
       var client = this.client = AgoraRTC.createClient({
         mode: 'live',
         codec: 'h264'
@@ -780,8 +781,14 @@
       client.on('onTokenPrivilegeDidExpire', this.onTokenPrivilegeDidExpire); // console.log('agora rtm sdk version: ' + AgoraRTM.VERSION + ' compatible');
 
       {
+        /*
+        AgoraRTM.LOG_FILTER_OFF
+        AgoraRTM.LOG_FILTER_ERROR
+        AgoraRTM.LOG_FILTER_INFO (Default)
+        AgoraRTM.LOG_FILTER_WARNING
+        */
         var messageClient = this.messageClient = AgoraRTM.createInstance(environment.appKey, {
-          logFilter: AgoraRTM.LOG_FILTER_ERROR
+          logFilter: AgoraRTM.LOG_FILTER_OFF
         }); // LOG_FILTER_DEBUG
 
         messageClient.on('ConnectionStateChanged', console.error);
