@@ -2,24 +2,66 @@
 
 <!-- @@block = main-->
 
-<div class="ui" *if="!state.connected">
-	<div class="group--info">
-		<div class="info" *if="state.mediaStatus === 'waiting'">ricerca camera e microfono...</div>
-		<div class="info" *if="state.mediaStatus === 'ready'">camera o microfono connessi</div>
-		<div class="info" *if="state.mediaStatus === 'unavailable'">camera e microfono non disponibili</div>
-		<button type="button" class="btn--connect" [class]="{ disabled: state.mediaStatus !== 'ready' }" (click)="state.mediaStatus === 'ready' && connect()">
-			<svg width="24" height="24" viewBox="0 0 24 24"><use xlink:href="#call"></use></svg>
-			<span *if="!state.connecting">Entra</span>
-			<span *if="state.connecting">In connessione...</span>
-		</button>
+<div class="ui" *if="!state.connected" [agora-device] (enter)="onEnter($event)">
+	<div class="group--info" *if="form">
+		<form class="form" [formGroup]="form" (submit)="onEnter($event)" name="form" role="form" novalidate autocomplete="off">
+			<!-- PREVIEW -->
+			<div class="agora-device-preview" agora-device-preview [video]="controls.video.value" [audio]="controls.audio.value" (stream)="onStream($event)">
+				<video class="video" muted></video>
+			</div>
+			<div class="group--info__content">
+				<!-- AUDIO -->
+				<div class="group--form--select" [class]="{ required: controls.audio.validators.length }">
+					<label>Audio</label>
+					<select class="control--select" [formControl]="controls.audio" required>
+						<option value="">Seleziona</option>
+						<option [value]="item.id" *for="let item of controls.audio.options" [innerHTML]="item.name"></option>
+					</select>
+					<svg class="icon icon--caret-down"><use xlink:href="#caret-down"></use></svg>
+				</div>
+				<!-- VIDEO -->
+				<div class="group--form--select" [class]="{ required: controls.video.validators.length }">
+					<label>Video</label>
+					<select class="control--select" [formControl]="controls.video" required>
+						<option value="">Seleziona</option>
+						<option [value]="item.id" *for="let item of controls.video.options" [innerHTML]="item.name"></option>
+					</select>
+					<svg class="icon icon--caret-down"><use xlink:href="#caret-down"></use></svg>
+				</div>
+				<div class="info" *if="!form.valid || !stream">seleziona sorgente audio e video</div>
+				<div class="info" *if="form.valid && stream">audio e video connessi</div>
+				<!--
+				<div class="info" *if="!form.valid">seleziona video e audio</div>
+				<div class="info" *if="state.mediaStatus === 'waiting'">ricerca camera e microfono...</div>
+				<div class="info" *if="state.mediaStatus === 'ready'">camera o microfono connessi</div>
+				<div class="info" *if="state.mediaStatus === 'unavailable'">camera e microfono non disponibili</div>
+				<button type="button" class="btn--connect" [class]="{ disabled: state.mediaStatus !== 'ready' }" (click)="state.mediaStatus === 'ready' && onEnter($event)">
+					<svg width="24" height="24" viewBox="0 0 24 24"><use xlink:href="#call"></use></svg>
+					<span *if="!state.connecting">Entra</span>
+					<span *if="state.connecting">In connessione...</span>
+				</button>
+				-->
+				<button type="submit" class="btn--connect" [class]="{ disabled: !form.valid || !stream }">
+					<svg width="24" height="24" viewBox="0 0 24 24"><use xlink:href="#call"></use></svg>
+					<span *if="!state.connecting">Entra</span>
+					<span *if="state.connecting">In connessione...</span>
+				</button>
+			</div>
+		</form>
 	</div>
 </div>
 
 <div class="ui" *if="state.connected">
 
 	<div class="ui__head">
-		<div class="group--remote">
-			<div class="video video--remote" [class]="{ disabled: !state.remote }"></div>
+		<div class="group--remote" [class]="'group--remote--' + remotes.length">
+			<div class="agora-stream" agora-stream [stream]="remote" *for="let remote of remotes">
+				<div class="agora-stream__player"></div>
+				<div class="agora-stream__info">
+					<svg class="cam-muted" width="24" height="24" viewBox="0 0 24 24"><use xlink:href="#cam-muted"></use></svg>
+					<svg class="mic-muted" width="24" height="24" viewBox="0 0 24 24"><use xlink:href="#mic-muted"></use></svg>
+				</div>
+			</div>
 		</div>
 		<div class="group--select" *if="form">
 			<form class="form" [formGroup]="form" (submit)="onSubmit()" name="form" role="form" novalidate autocomplete="off">
@@ -33,7 +75,14 @@
 			<button type="button" class="btn--control" [class]="{ active: state.control }" (click)="toggleControl($event)" *if="state.role == 'publisher'">
 				<svg width="24" height="24" viewBox="0 0 24 24"><use xlink:href="#gamepad"></use></svg>
 			</button>
-			<div class="video video--local" [class]="{ disabled: !state.local }"></div>
+			<div class="agora-stream" *if="!local"></div>
+			<div class="agora-stream" agora-stream [stream]="local" *if="local">
+				<div class="agora-stream__player"></div>
+				<div class="agora-stream__info">
+					<svg class="cam-muted" width="24" height="24" viewBox="0 0 24 24"><use xlink:href="#cam-muted"></use></svg>
+					<svg class="mic-muted" width="24" height="24" viewBox="0 0 24 24"><use xlink:href="#mic-muted"></use></svg>
+				</div>
+			</div>
 		</div>
 	</div>
 
@@ -58,10 +107,10 @@
 				<button type="button" class="btn--call" (click)="disconnect()">
 					<svg width="24" height="24" viewBox="0 0 24 24"><use xlink:href="#call"></use></svg>
 				</button>
-				<button type="button" class="btn--cam" [class]="{ muted: state.cameraMuted, disabled: !state.local }" (click)="toggleCamera()">
+				<button type="button" class="btn--cam" [class]="{ muted: state.cameraMuted, disabled: !local }" (click)="toggleCamera()">
 					<svg width="24" height="24" viewBox="0 0 24 24"><use xlink:href="#cam"></use></svg>
 				</button>
-				<button type="button" class="btn--mic" [class]="{ muted: state.audioMuted, disabled: !state.local }" (click)="toggleAudio()">
+				<button type="button" class="btn--mic" [class]="{ muted: state.audioMuted, disabled: !local }" (click)="toggleAudio()">
 					<svg width="24" height="24" viewBox="0 0 24 24"><use xlink:href="#mic"></use></svg>
 				</button>
 			</div>

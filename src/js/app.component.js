@@ -1,7 +1,7 @@
 import { Component, getContext } from 'rxcomp';
 // import UserService from './user/user.service';
 import { FormControl, FormGroup, Validators } from 'rxcomp-form';
-import { first, takeUntil } from 'rxjs/operators';
+import { first, map, takeUntil } from 'rxjs/operators';
 import AgoraService, { MediaStatus, MessageType, RoleType, StreamQualities } from './agora/agora.service';
 import { BASE_HREF, DEBUG } from './const';
 import HttpService from './http/http.service';
@@ -17,18 +17,44 @@ export default class AppComponent extends Component {
 	onInit() {
 		const { node } = getContext(this);
 		node.classList.remove('hidden');
+		this.state = {};
 		this.view = null;
 		this.form = null;
+		this.local = null;
+		this.remotes = [];
 		const vrService = this.vrService = VRService.getService();
 		vrService.status$.pipe(
 			takeUntil(this.unsubscribe$)
 		).subscribe(status => this.pushChanges());
+		this.load$().pipe(
+			first()
+		).subscribe(data => {
+			this.data = data;
+			this.init();
+			this.initForm();
+		});
+	}
+
+	load$() {
+		return HttpService.get$('./api/data.json').pipe(
+			map(data => {
+				data.views.forEach(view => {
+					view.items.forEach((item, index) => {
+						item.index = index;
+					});
+				});
+				return data;
+			})
+		);
+	}
+
+	init() {
 		if (!DEBUG) {
 			const agora = this.agora = AgoraService.getSingleton();
 			agora.message$.pipe(
 				takeUntil(this.unsubscribe$)
 			).subscribe(message => {
-				console.log('AppComponent.message', message);
+				// console.log('AppComponent.message', message);
 				switch (message.type) {
 					case MessageType.RequestControl:
 						this.onRemoteControlRequest(message);
@@ -42,14 +68,14 @@ export default class AppComponent extends Component {
 					case MessageType.RequestInfoResult:
 						if (this.controls.view.value !== message.viewId) {
 							this.controls.view.value = message.viewId;
-							console.log('AppComponent.RequestInfoResult', message.viewId);
+							// console.log('AppComponent.RequestInfoResult', message.viewId);
 						}
 						break;
 					case MessageType.NavToView:
 						if ((agora.state.locked || agora.state.spying) && message.viewId) {
 							if (this.controls.view.value !== message.viewId) {
 								this.controls.view.value = message.viewId;
-								console.log('AppComponent.NavToView', message.viewId);
+								// console.log('AppComponent.NavToView', message.viewId);
 							}
 						}
 						break;
@@ -58,14 +84,24 @@ export default class AppComponent extends Component {
 			agora.state$.pipe(
 				takeUntil(this.unsubscribe$)
 			).subscribe(state => {
-				console.log('AppComponent.state', state);
+				// console.log('AppComponent.state', state);
 				this.state = state;
 				this.pushChanges();
 			});
-			agora.devices$().subscribe(devices => {
-				agora.patchState({ devices, mediaStatus: (devices.videos.length || devices.audios.length) ? MediaStatus.Ready : MediaStatus.Unavalable });
+			agora.local$.pipe(
+				takeUntil(this.unsubscribe$)
+			).subscribe(local => {
+				console.log('AppComponent.local', local);
+				this.local = local;
+				this.pushChanges();
 			});
-			this.checkCamera();
+			agora.remotes$.pipe(
+				takeUntil(this.unsubscribe$)
+			).subscribe(remotes => {
+				console.log('AppComponent.remotes', remotes);
+				this.remotes = remotes;
+				this.pushChanges();
+			});
 		} else {
 			const role = LocationService.get('role') || RoleType.Attendee;
 			this.state = {
@@ -81,32 +117,6 @@ export default class AppComponent extends Component {
 				quality: StreamQualities[StreamQualities.length - 1],
 			};
 		}
-		this.loadData();
-	}
-
-	checkCamera() {
-		if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
-			navigator.mediaDevices.getUserMedia({ video: true, audio: true }).then((stream) => {
-				console.log('stream', stream);
-				this.agora.patchState({ mediaStatus: MediaStatus.Ready });
-			}).catch((error) => {
-				console.log('media error', error);
-			});
-		}
-	}
-
-	loadData() {
-		HttpService.get$('./api/data.json').pipe(
-			first()
-		).subscribe(data => {
-			data.views.forEach(view => {
-				view.items.forEach((item, index) => {
-					item.index = index;
-				});
-			});
-			this.data = data;
-			this.initForm();
-		});
 	}
 
 	initForm() {
@@ -119,7 +129,7 @@ export default class AppComponent extends Component {
 		form.changes$.pipe(
 			takeUntil(this.unsubscribe$)
 		).subscribe((changes) => {
-			console.log('form.changes$', changes, form.valid);
+			// console.log('form.changes$', changes, form.valid);
 			const view = data.views.find(x => x.id === changes.view);
 			this.view = null;
 			this.pushChanges();
@@ -134,12 +144,18 @@ export default class AppComponent extends Component {
 		});
 	}
 
-	connect() {
+	onEnter(preferences) {
+		this.agora.patchState({ mediaEnabled: true });
+		this.connect(preferences);
+	}
+
+	connect(preferences) {
 		if (!this.state.connecting) {
-			let quality = this.agora.state.role === RoleType.Attendee ? StreamQualities[StreamQualities.length - 1] : StreamQualities[1]; // HD 1920
-			this.agora.patchState({ connecting: true, quality });
+			// let quality = this.agora.state.role === RoleType.Attendee ? StreamQualities[StreamQualities.length - 1] : StreamQualities[1]; // HD 1920
+			// this.agora.patchState({ connecting: true, quality });
+			this.agora.patchState({ connecting: true });
 			setTimeout(() => {
-				this.agora.connect$().pipe(
+				this.agora.connect$(preferences).pipe(
 					takeUntil(this.unsubscribe$)
 				).subscribe((state) => {
 					this.state = Object.assign(this.state, state);
@@ -205,7 +221,7 @@ export default class AppComponent extends Component {
 	patchState(state) {
 		this.state = Object.assign({}, this.state, state);
 		this.pushChanges();
-		console.log(this.state);
+		// console.log(this.state);
 	}
 
 	toggleCamera() {

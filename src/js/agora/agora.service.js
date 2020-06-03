@@ -9,7 +9,7 @@ import Emittable from '../emittable/emittable';
 import HttpService from '../http/http.service';
 import LocationService from '../location/location.service';
 
-export const USE_AUTODETECT = true;
+export const USE_AUTODETECT = false;
 export const USE_RTM = true;
 
 export const StreamQualities = [{
@@ -72,6 +72,21 @@ export const StreamQualities = [{
 		min: 910,
 		max: 1380
 	}
+}, {
+	id: 5,
+	name: 'LOWEST 240p 320x240',
+	resolution: {
+		width: 320,
+		height: 240
+	},
+	frameRate: {
+		min: 15,
+		max: 15
+	},
+	bitrate: {
+		min: 140,
+		max: 200
+	}
 }];
 
 export const MediaStatus = {
@@ -105,8 +120,11 @@ export class AgoraEvent {
 		Object.assign(this, options);
 	}
 }
-
 export class AgoraRemoteEvent extends AgoraEvent {}
+export class AgoraMuteVideoEvent extends AgoraEvent {}
+export class AgoraUnmuteVideoEvent extends AgoraEvent {}
+export class AgoraMuteAudioEvent extends AgoraEvent {}
+export class AgoraUnmuteAudioEvent extends AgoraEvent {}
 
 export default class AgoraService extends Emittable {
 
@@ -114,7 +132,7 @@ export default class AgoraService extends Emittable {
 		if (!this.AGORA) {
 			this.AGORA = new AgoraService(defaultDevices);
 		}
-		console.log('AgoraService', this.AGORA.state);
+		// console.log('AgoraService', this.AGORA.state);
 		return this.AGORA;
 	}
 
@@ -132,9 +150,14 @@ export default class AgoraService extends Emittable {
 		}
 		super();
 		this.onStreamPublished = this.onStreamPublished.bind(this);
+		this.onStreamUnpublished = this.onStreamUnpublished.bind(this);
 		this.onStreamAdded = this.onStreamAdded.bind(this);
-		this.onStreamSubscribed = this.onStreamSubscribed.bind(this);
 		this.onStreamRemoved = this.onStreamRemoved.bind(this);
+		this.onStreamSubscribed = this.onStreamSubscribed.bind(this);
+		this.onMuteVideo = this.onMuteVideo.bind(this);
+		this.onUnmuteVideo = this.onUnmuteVideo.bind(this);
+		this.onMuteAudio = this.onMuteAudio.bind(this);
+		this.onUnmuteAudio = this.onUnmuteAudio.bind(this);
 		this.onPeerLeaved = this.onPeerLeaved.bind(this);
 		this.onConnectionStateChange = this.onConnectionStateChange.bind(this);
 		this.onTokenPrivilegeWillExpire = this.onTokenPrivilegeWillExpire.bind(this);
@@ -154,8 +177,15 @@ export default class AgoraService extends Emittable {
 			quality: StreamQualities[StreamQualities.length - 1],
 		};
 		this.state$ = new BehaviorSubject(state);
+		this.local$ = new BehaviorSubject(null);
+		this.remotes$ = new BehaviorSubject([]);
 		this.message$ = new Subject();
 		this.events$ = new Subject();
+	}
+
+	patchState(state) {
+		this.state = Object.assign({}, this.state, state);
+		// console.log('AgoraService.patchState', this.state);
 	}
 
 	addStreamDevice(src) {
@@ -185,11 +215,6 @@ export default class AgoraService extends Emittable {
 		this.patchState({ devices: devices });
 	}
 
-	patchState(state) {
-		this.state = Object.assign({}, this.state, state);
-		console.log(this.state);
-	}
-
 	checkMediaDevices$(options = { video: true, audio: true }) {
 		if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
 			return from(navigator.mediaDevices.getUserMedia(options)).pipe(
@@ -203,36 +228,46 @@ export default class AgoraService extends Emittable {
 	devices$() {
 		const inputs = this.state.devices;
 		return from(new Promise((resolve, reject) => {
-			AgoraRTC.getDevices((devices) => {
-				for (let i = 0; i < devices.length; i++) {
-					const device = devices[i];
-					// console.log('device', device.deviceId);
-					if (device.kind === 'videoinput' && device.deviceId) {
-						inputs.videos.push({
-							label: device.label || 'camera-' + inputs.videos.length,
-							deviceId: device.deviceId,
-							kind: device.kind
-						});
+			const tempStream = AgoraRTC.createStream({ audio: true, video: true });
+			tempStream.init(() => {
+				AgoraRTC.getDevices((devices) => {
+					tempStream.close();
+					for (let i = 0; i < devices.length; i++) {
+						const device = devices[i];
+						// console.log('device', device.deviceId);
+						if (device.kind === 'videoinput' && device.deviceId) {
+							inputs.videos.push({
+								label: device.label || 'camera-' + inputs.videos.length,
+								deviceId: device.deviceId,
+								kind: device.kind
+							});
+						}
+						if (device.kind === 'audioinput' && device.deviceId) {
+							inputs.audios.push({
+								label: device.label || 'microphone-' + inputs.videos.length,
+								deviceId: device.deviceId,
+								kind: device.kind
+							});
+						}
 					}
-					if (device.kind === 'audioinput' && device.deviceId) {
-						inputs.audios.push({
-							label: device.label || 'microphone-' + inputs.videos.length,
-							deviceId: device.deviceId,
-							kind: device.kind
-						});
+					if (inputs.videos.length > 0 || inputs.audios.length > 0) {
+						resolve(inputs);
+					} else {
+						reject(inputs);
 					}
-				}
-				if (inputs.videos.length > 0 || inputs.audios.length > 0) {
-					resolve(inputs);
-				} else {
-					reject(inputs);
-				}
+				});
 			});
 		}));
 	}
 
-	connect$() {
-		this.patchState({ connecting: true });
+	connect$(preferences) {
+		const devices = this.state.devices;
+		if (preferences) {
+			devices.video = preferences.video;
+			devices.audio = preferences.audio;
+		}
+		// console.log('AgoraService.connect$', preferences, devices);
+		this.patchState({ connecting: true, devices });
 		this.createClient(() => {
 			this.getRtcToken().subscribe(token => {
 				// console.log('token', token);
@@ -273,9 +308,14 @@ export default class AgoraService extends Emittable {
 			this.client = null;
 		});
 		client.on('stream-published', this.onStreamPublished);
+		client.on('stream-unpublished', this.onStreamUnpublished);
 		//subscribe remote stream
 		client.on('stream-added', this.onStreamAdded);
 		client.on('stream-subscribed', this.onStreamSubscribed);
+		client.on('mute-video', this.onMuteVideo);
+		client.on('unmute-video', this.onUnmuteVideo);
+		client.on('mute-audio', this.onMuteAudio);
+		client.on('unmute-audio', this.onUnmuteAudio);
 		client.on('error', this.onError);
 		// Occurs when the peer user leaves the channel; for example, the peer user calls Client.leave.
 		client.on('peer-leave', this.onPeerLeaved);
@@ -296,7 +336,7 @@ export default class AgoraService extends Emittable {
 		const clientUID = null;
 		token = null; // !!!
 		client.join(token, environment.channelName, clientUID, (uid) => {
-			console.log('AgoraService.joinChannel', uid);
+			// console.log('AgoraService.joinChannel', uid);
 			this.patchState({ connected: true, uid: uid });
 			if (USE_RTM) {
 				this.getRtmToken(uid).subscribe(token => {
@@ -319,7 +359,7 @@ export default class AgoraService extends Emittable {
 			}
 			this.createMediaStream(uid, this.state.devices.video, this.state.devices.audio);
 		}, (error) => {
-			console.log('Join channel failed', error);
+			console.log('AgoraService.joinChannel.error', error);
 		});
 		// https://console.agora.io/invite?sign=YXBwSWQlM0RhYjQyODlhNDZjZDM0ZGE2YTYxZmQ4ZDY2Nzc0YjY1ZiUyNm5hbWUlM0RaYW1wZXR0aSUyNnRpbWVzdGFtcCUzRDE1ODY5NjM0NDU=// join link expire in 30 minutes
 	}
@@ -393,11 +433,11 @@ export default class AgoraService extends Emittable {
 					hls.on(Hls.Events.MEDIA_ATTACHED, () => {
 						hls.loadSource(video.src);
 						hls.on(Hls.Events.MANIFEST_PARSED, (event, data) => {
-							console.log('HlsDirective', data.levels);
+							// console.log('HlsDirective', data.levels);
 							element.play().then(success => {
 								const stream = element.captureStream();
 								options.videoSource = stream.getVideoTracks()[0];
-								console.log('AgoraService.getVideoStream', element, stream, stream.getVideoTracks());
+								// console.log('AgoraService.getVideoStream', element, stream, stream.getVideoTracks());
 								resolve(options);
 							}, error => {
 								console.log('AgoraService.getVideoStream.error', error);
@@ -410,7 +450,7 @@ export default class AgoraService extends Emittable {
 					// element.oncanplay = () => {
 					const stream = element.captureStream();
 					options.videoSource = stream.getVideoTracks()[0];
-					console.log('getVideoStream', element, stream, stream.getVideoTracks());
+					// console.log('getVideoStream', element, stream, stream.getVideoTracks());
 					resolve(options);
 					// };
 					/*
@@ -445,15 +485,15 @@ export default class AgoraService extends Emittable {
 					hls.on(Hls.Events.MEDIA_ATTACHED, () => {
 						hls.loadSource(audio.src);
 						hls.on(Hls.Events.MANIFEST_PARSED, (event, data) => {
-							console.log('HlsDirective', data.levels);
+							// console.log('HlsDirective', data.levels);
 							hls.loadLevel = data.levels.length - 1;
 							element.play().then(success => {
 								const stream = element.captureStream();
 								options.audioSource = stream.getAudioTracks()[0];
-								console.log('AgoraService.getAudioStream', element, stream, stream.getAudioTracks());
+								// console.log('AgoraService.getAudioStream', element, stream, stream.getAudioTracks());
 								resolve(options);
 							}, error => {
-								console.log('AgoraService.getVideoStream.error', error);
+								console.log('AgoraService.getAudioStream.error', error);
 							});
 						});
 					});
@@ -463,7 +503,7 @@ export default class AgoraService extends Emittable {
 					// element.oncanplay = () => {
 					const stream = element.captureStream();
 					options.audioSource = stream.getAudioTracks()[0];
-					console.log('AgoraService.getAudioStream', element, stream, stream.getAudioTracks());
+					// console.log('AgoraService.getAudioStream', element, stream, stream.getAudioTracks());
 					resolve(options);
 					// };
 					/*
@@ -498,42 +538,19 @@ export default class AgoraService extends Emittable {
 			this.getVideoStream(options, video),
 			this.getAudioStream(options, audio)
 		]).then(success => {
-			console.log('AgoraService.createMediaStream', uid, options);
+			// console.log('AgoraService.createMediaStream', uid, options);
 			const local = this.local = AgoraRTC.createStream(options);
-			if (this.state.role === RoleType.Publisher) {
-				const quality = {
-					resolution: this.state.quality.resolution,
-					frameRate: this.state.quality.frameRate,
-					bitrate: this.state.quality.bitrate,
-				};
-				console.log('AgoraService.setVideoEncoderConfiguration', quality)
-				local.setVideoEncoderConfiguration(quality);
-			}
+			const quality = Object.assign({}, this.state.quality);
+			// console.log('AgoraService.setVideoEncoderConfiguration', quality);
+			local.setVideoEncoderConfiguration(quality);
 			this.initLocalStream(options);
 		});
 	}
 
 	initLocalStream(options) {
-		const client = this.client;
 		const local = this.local;
 		local.init(() => {
-			const id = local.getId();
-			console.log('AgoraService.initLocalStream', id);
-			const video = document.querySelector('.video--local');
-			if (video) {
-				video.setAttribute('id', 'agora_local_' + id);
-				video.classList.add('playing');
-				// setTimeout(() => {
-				local.play('agora_local_' + id, (error) => {
-					if (error) {
-						console.log('AgoraService.initLocalStream.play.error', error);
-					} else {
-						this.patchState({ local: id, localStream: local });
-						this.publishLocalStream();
-					}
-				});
-				// }, 100);
-			}
+			this.publishLocalStream();
 		}, (error) => {
 			console.log('AgoraService.initLocalStream.init.error', error);
 		});
@@ -571,22 +588,27 @@ export default class AgoraService extends Emittable {
 	publishLocalStream() {
 		const client = this.client;
 		const local = this.local;
-		//publish local stream
+		// publish local stream
 		client.publish(local, (error) => {
-			console.log('AgoraService.publishLocalStream.error', error, local.getId());
+			console.log('AgoraService.publishLocalStream.error', local.getId(), error);
 		});
+		this.local$.next(local);
 	}
 
 	unpublishLocalStream() {
 		const client = this.client;
 		const local = this.local;
-		client.unpublish(local, (error) => {
-			console.log('unpublish failed');
-		});
+		if (local) {
+			client.unpublish(local, (error) => {
+				console.log('AgoraService.unpublishLocalStream.error', local.getId(), error);
+			});
+		}
+		this.local$.next(null);
 	}
 
 	leaveChannel() {
 		this.patchState({ connecting: false });
+		this.unpublishLocalStream();
 		const client = this.client;
 		client.leave(() => {
 			// console.log('Leave channel successfully');
@@ -596,7 +618,7 @@ export default class AgoraService extends Emittable {
 			messageChannel.leave();
 			messageClient.logout();
 		}, (error) => {
-			console.log('Leave channel failed');
+			console.log('AgoraService.leaveChannel.error', error);
 		});
 	}
 
@@ -607,9 +629,11 @@ export default class AgoraService extends Emittable {
 			if (local.userMuteVideo) {
 				local.unmuteVideo();
 				this.patchState({ cameraMuted: false });
+				this.events$.next(new AgoraUnmuteVideoEvent({ streamId: local.getId() }));
 			} else {
 				local.muteVideo();
 				this.patchState({ cameraMuted: true });
+				this.events$.next(new AgoraMuteVideoEvent({ streamId: local.getId() }));
 			}
 		}
 	}
@@ -621,9 +645,11 @@ export default class AgoraService extends Emittable {
 			if (local.userMuteAudio) {
 				local.unmuteAudio();
 				this.patchState({ audioMuted: false });
+				this.events$.next(new AgoraUnmuteAudioEvent({ streamId: local.getId() }));
 			} else {
 				local.muteAudio();
 				this.patchState({ audioMuted: true });
+				this.events$.next(new AgoraMuteAudioEvent({ streamId: local.getId() }));
 			}
 		}
 	}
@@ -705,17 +731,6 @@ export default class AgoraService extends Emittable {
 			}).then((message) => {
 				// console.log('AgoraService.sendRemoteControlRequest return', message);
 				if (message.type === MessageType.RequestControlAccepted) {
-					/*
-			  this.remoteDeviceInfo = message.payload;
-			  if (this.playerElement) {
-				this.remoteStream.play(this.playerElement.id, { fit: 'contain', muted: true });
-				this.controlMouse()
-				resolve(true);
-				return;
-			  } else {
-				reject('request not accepted');
-			  }
-			  */
 					resolve(true);
 				} else if (message.type === MessageType.RequestControlRejected) {
 					// this.remoteDeviceInfo = undefined
@@ -762,7 +777,7 @@ export default class AgoraService extends Emittable {
 	// events
 
 	onError(error) {
-		console.log('Agora', error);
+		console.log('AgoraService.onError', error);
 	}
 
 	onMessage(data, uid) {
@@ -794,68 +809,84 @@ export default class AgoraService extends Emittable {
 	}
 
 	onStreamPublished(event) {
-		console.log('Publish local stream successfully');
+		console.log('AgoraService.onStreamPublished');
+		this.local$.next(this.local);
+	}
+
+	onStreamUnpublished(event) {
+		console.log('AgoraService.onStreamUnpublished');
+		this.local$.next(null);
 	}
 
 	onStreamAdded(event) {
 		const client = this.client;
-		var stream = event.stream;
-		var id = stream.getId();
-		console.log('New stream added: ' + id);
+		const stream = event.stream;
+		const id = stream.getId();
 		if (id !== this.state.uid) {
 			client.subscribe(stream, (error) => {
-				console.log('stream subscribe failed', error);
+				console.log('AgoraService.onStreamAdded.subscribe.error', error);
 			});
 		}
 	}
 
-	onStreamSubscribed(event) {
-		var stream = event.stream;
-		var id = stream.getId();
-		const element = document.querySelector('.video--remote');
-		if (element) {
-			element.setAttribute('id', 'agora_remote_' + id);
-			element.classList.add('playing');
-		}
-		this.patchState({ remote: id, remoteStream: stream });
-		// console.log('element', element);
-		stream.play('agora_remote_' + id);
-		console.log('AgoraService.onStreamSubscribed', id);
-		if (element) {
-			this.events$.next(new AgoraRemoteEvent({ stream, element }));
+	onStreamRemoved(event) {
+		const stream = event.stream;
+		const id = stream.getId();
+		console.log('AgoraService.onStreamRemoved', id, this.state.uid);
+		if (id !== this.state.uid) {
+			this.remoteRemove(id);
 		}
 	}
 
-	// Occurs when the remote stream is removed; for example, a peer user calls Client.unpublish.
-	onStreamRemoved(event) {
-		var stream = event.stream;
-		var id = stream.getId();
-		// console.log('stream-removed remote-uid: ', id);
-		if (id !== this.state.uid) {
-			stream.stop('agora_remote_' + id);
-			const video = document.querySelector('.video--remote');
-			if (video) {
-				video.classList.remove('playing');
-				video.textContent = '';
-			}
-		}
-		this.patchState({ remote: null, remoteStream: null });
-		// console.log('stream-removed remote-uid: ', id);
+	onStreamSubscribed(event) {
+		this.remoteAdd(event.stream);
 	}
 
 	onPeerLeaved(event) {
-		var id = event.uid;
-		// console.log('peer-leave id', id);
+		const id = event.uid;
 		if (id !== this.state.uid) {
-			const video = document.querySelector('.video--remote');
-			if (video) {
-				video.classList.remove('playing');
-				video.textContent = '';
-			}
-			this.patchState({ remote: null, remoteStream: null, locked: false, control: false });
-		} else {
-			this.patchState({ local: null, localStream: null, locked: false, control: false });
+			this.remoteRemove(id);
 		}
+		this.patchState({ locked: false, control: false });
+	}
+
+	remoteAdd(stream) {
+		console.log('AgoraService.remoteAdd', stream);
+		const remotes = this.remotes$.getValue();
+		remotes.push(stream);
+		this.remotes$.next(remotes);
+		this.events$.next(new AgoraRemoteEvent({ stream }));
+	}
+
+	remoteRemove(streamId) {
+		console.log('AgoraService.remoteRemove', streamId);
+		const remotes = this.remotes$.getValue();
+		const remote = remotes.find(x => x.getId() === streamId);
+		if (remote) {
+			remote.stop();
+			remotes.splice(remotes.indexOf(remote), 1);
+			this.remotes$.next(remotes);
+		}
+	}
+
+	onMuteVideo(event) {
+		console.log('AgoraService.onMuteVideo', event);
+		this.events$.next(new AgoraMuteVideoEvent({ streamId: event.uid }));
+	}
+
+	onUnmuteVideo(event) {
+		console.log('AgoraService.onUnmuteVideo', event);
+		this.events$.next(new AgoraUnmuteVideoEvent({ streamId: event.uid }));
+	}
+
+	onMuteAudio(event) {
+		console.log('AgoraService.onMuteAudio', event);
+		this.events$.next(new AgoraMuteAudioEvent({ streamId: event.uid }));
+	}
+
+	onUnmuteAudio(event) {
+		console.log('AgoraService.onUnmuteAudio', event);
+		this.events$.next(new AgoraUnmuteAudioEvent({ streamId: event.uid }));
 	}
 
 	onConnectionStateChange(event) {
@@ -865,13 +896,13 @@ export default class AgoraService extends Emittable {
 	onTokenPrivilegeWillExpire(event) {
 		// After requesting a new token
 		// client.renewToken(token);
-		console.log('onTokenPrivilegeWillExpire');
+		console.log('AgoraService.onTokenPrivilegeWillExpire');
 	}
 
 	onTokenPrivilegeDidExpire(event) {
 		// After requesting a new token
 		// client.renewToken(token);
-		console.log('onTokenPrivilegeDidExpire');
+		console.log('AgoraService.onTokenPrivilegeDidExpire');
 	}
 
 }

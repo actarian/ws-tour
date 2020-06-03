@@ -546,6 +546,7 @@ export default class WorldComponent extends Component {
 	}
 
 	onMouseWheel(event) {
+		// !!! fov zoom
 		try {
 			const camera = this.camera;
 			const fov = camera.fov + event.deltaY * 0.01;
@@ -565,12 +566,10 @@ export default class WorldComponent extends Component {
 		this.onMouseWheel = this.onMouseWheel.bind(this);
 		// this.controls.addEventListener('change', this.render); // use if there is no animation loop
 		window.addEventListener('resize', this.resize, false);
+		document.addEventListener('wheel', this.onMouseWheel, false);
 		document.addEventListener('mousemove', this.onMouseMove, false);
 		this.container.addEventListener('mousedown', this.onMouseDown, false);
 		this.container.addEventListener('mouseup', this.onMouseUp, false);
-		/*
-		document.addEventListener('wheel', this.onMouseWheel, false);
-		*/
 		const vrService = this.vrService = VRService.getService();
 		vrService.session$.pipe(
 			takeUntil(this.unsubscribe$),

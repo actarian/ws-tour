@@ -43,6 +43,112 @@
     return self;
   }
 
+  var AgoraDevicePreviewComponent = /*#__PURE__*/function (_Component) {
+    _inheritsLoose(AgoraDevicePreviewComponent, _Component);
+
+    function AgoraDevicePreviewComponent() {
+      return _Component.apply(this, arguments) || this;
+    }
+
+    var _proto = AgoraDevicePreviewComponent.prototype;
+
+    _proto.onInit = function onInit() {
+      this.onLoadedMetadata = this.onLoadedMetadata.bind(this);
+
+      var _getContext = rxcomp.getContext(this),
+          node = _getContext.node;
+
+      var preview = this.preview = node.querySelector('video');
+      preview.addEventListener('loadedmetadata', this.onLoadedMetadata);
+    };
+
+    _proto.onDestroy = function onDestroy() {
+      var preview = this.preview;
+      preview.removeEventListener('loadedmetadata', this.onLoadedMetadata);
+    };
+
+    _proto.initStream = function initStream() {
+      var _this = this;
+
+      var preview = this.preview;
+
+      if (!this.preview) {
+        return;
+      }
+
+      if (this.video_ || this.audio_) {
+        if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+          navigator.mediaDevices.getUserMedia({
+            video: this.video_ ? {
+              deviceId: this.video_
+            } : false,
+            audio: this.audio_ ? {
+              deviceId: this.audio_
+            } : false
+          }).then(function (stream) {
+            if ('srcObject' in preview) {
+              preview.srcObject = stream;
+            } else {
+              preview.src = window.URL.createObjectURL(stream);
+            }
+
+            _this.stream.next(stream);
+          }).catch(function (error) {
+            console.log('AgoraDevicePreviewComponent.initStream.error', error.name, error.message);
+
+            _this.stream.next(null);
+          });
+        }
+      } else {
+        if ('srcObject' in preview) {
+          preview.srcObject = null;
+        } else {
+          preview.src = null;
+        }
+
+        this.stream.next(null);
+      }
+    };
+
+    _proto.onLoadedMetadata = function onLoadedMetadata(event) {
+      this.preview.play();
+    } // onView() { const context = getContext(this); }
+    // onChanges() {}
+    // onDestroy() {}
+    ;
+
+    _createClass(AgoraDevicePreviewComponent, [{
+      key: "video",
+      get: function get() {
+        return this.video_;
+      },
+      set: function set(video) {
+        if (this.video_ !== video) {
+          this.video_ = video;
+          this.initStream();
+        }
+      }
+    }, {
+      key: "audio",
+      get: function get() {
+        return this.audio_;
+      },
+      set: function set(audio) {
+        if (this.audio_ !== audio) {
+          this.audio_ = audio;
+          this.initStream();
+        }
+      }
+    }]);
+
+    return AgoraDevicePreviewComponent;
+  }(rxcomp.Component);
+  AgoraDevicePreviewComponent.meta = {
+    selector: '[agora-device-preview]',
+    outputs: ['stream'],
+    inputs: ['video', 'audio']
+  };
+
   var environment = {
     appKey: '8b0cae93d47a44e48e97e7fd0404be4e',
     appCertificate: '',
@@ -340,6 +446,21 @@
       min: 910,
       max: 1380
     }
+  }, {
+    id: 5,
+    name: 'LOWEST 240p 320x240',
+    resolution: {
+      width: 320,
+      height: 240
+    },
+    frameRate: {
+      min: 15,
+      max: 15
+    },
+    bitrate: {
+      min: 140,
+      max: 200
+    }
   }];
   var MediaStatus = {
     Waiting: 'waiting',
@@ -376,6 +497,42 @@
 
     return AgoraRemoteEvent;
   }(AgoraEvent);
+  var AgoraMuteVideoEvent = /*#__PURE__*/function (_AgoraEvent2) {
+    _inheritsLoose(AgoraMuteVideoEvent, _AgoraEvent2);
+
+    function AgoraMuteVideoEvent() {
+      return _AgoraEvent2.apply(this, arguments) || this;
+    }
+
+    return AgoraMuteVideoEvent;
+  }(AgoraEvent);
+  var AgoraUnmuteVideoEvent = /*#__PURE__*/function (_AgoraEvent3) {
+    _inheritsLoose(AgoraUnmuteVideoEvent, _AgoraEvent3);
+
+    function AgoraUnmuteVideoEvent() {
+      return _AgoraEvent3.apply(this, arguments) || this;
+    }
+
+    return AgoraUnmuteVideoEvent;
+  }(AgoraEvent);
+  var AgoraMuteAudioEvent = /*#__PURE__*/function (_AgoraEvent4) {
+    _inheritsLoose(AgoraMuteAudioEvent, _AgoraEvent4);
+
+    function AgoraMuteAudioEvent() {
+      return _AgoraEvent4.apply(this, arguments) || this;
+    }
+
+    return AgoraMuteAudioEvent;
+  }(AgoraEvent);
+  var AgoraUnmuteAudioEvent = /*#__PURE__*/function (_AgoraEvent5) {
+    _inheritsLoose(AgoraUnmuteAudioEvent, _AgoraEvent5);
+
+    function AgoraUnmuteAudioEvent() {
+      return _AgoraEvent5.apply(this, arguments) || this;
+    }
+
+    return AgoraUnmuteAudioEvent;
+  }(AgoraEvent);
 
   var AgoraService = /*#__PURE__*/function (_Emittable) {
     _inheritsLoose(AgoraService, _Emittable);
@@ -383,9 +540,9 @@
     AgoraService.getSingleton = function getSingleton(defaultDevices) {
       if (!this.AGORA) {
         this.AGORA = new AgoraService(defaultDevices);
-      }
+      } // console.log('AgoraService', this.AGORA.state);
 
-      console.log('AgoraService', this.AGORA.state);
+
       return this.AGORA;
     };
 
@@ -408,9 +565,14 @@
 
       _this = _Emittable.call(this) || this;
       _this.onStreamPublished = _this.onStreamPublished.bind(_assertThisInitialized(_this));
+      _this.onStreamUnpublished = _this.onStreamUnpublished.bind(_assertThisInitialized(_this));
       _this.onStreamAdded = _this.onStreamAdded.bind(_assertThisInitialized(_this));
-      _this.onStreamSubscribed = _this.onStreamSubscribed.bind(_assertThisInitialized(_this));
       _this.onStreamRemoved = _this.onStreamRemoved.bind(_assertThisInitialized(_this));
+      _this.onStreamSubscribed = _this.onStreamSubscribed.bind(_assertThisInitialized(_this));
+      _this.onMuteVideo = _this.onMuteVideo.bind(_assertThisInitialized(_this));
+      _this.onUnmuteVideo = _this.onUnmuteVideo.bind(_assertThisInitialized(_this));
+      _this.onMuteAudio = _this.onMuteAudio.bind(_assertThisInitialized(_this));
+      _this.onUnmuteAudio = _this.onUnmuteAudio.bind(_assertThisInitialized(_this));
       _this.onPeerLeaved = _this.onPeerLeaved.bind(_assertThisInitialized(_this));
       _this.onConnectionStateChange = _this.onConnectionStateChange.bind(_assertThisInitialized(_this));
       _this.onTokenPrivilegeWillExpire = _this.onTokenPrivilegeWillExpire.bind(_assertThisInitialized(_this));
@@ -433,12 +595,18 @@
         quality: StreamQualities[StreamQualities.length - 1]
       };
       _this.state$ = new rxjs.BehaviorSubject(state);
+      _this.local$ = new rxjs.BehaviorSubject(null);
+      _this.remotes$ = new rxjs.BehaviorSubject([]);
       _this.message$ = new rxjs.Subject();
       _this.events$ = new rxjs.Subject();
       return _this;
     }
 
     var _proto = AgoraService.prototype;
+
+    _proto.patchState = function patchState(state) {
+      this.state = Object.assign({}, this.state, state); // console.log('AgoraService.patchState', this.state);
+    };
 
     _proto.addStreamDevice = function addStreamDevice(src) {
       this.removeStreamDevice();
@@ -475,11 +643,6 @@
       });
     };
 
-    _proto.patchState = function patchState(state) {
-      this.state = Object.assign({}, this.state, state);
-      console.log(this.state);
-    };
-
     _proto.checkMediaDevices$ = function checkMediaDevices$(options) {
       if (options === void 0) {
         options = {
@@ -500,41 +663,58 @@
     _proto.devices$ = function devices$() {
       var inputs = this.state.devices;
       return rxjs.from(new Promise(function (resolve, reject) {
-        AgoraRTC.getDevices(function (devices) {
-          for (var i = 0; i < devices.length; i++) {
-            var device = devices[i]; // console.log('device', device.deviceId);
+        var tempStream = AgoraRTC.createStream({
+          audio: true,
+          video: true
+        });
+        tempStream.init(function () {
+          AgoraRTC.getDevices(function (devices) {
+            tempStream.close();
 
-            if (device.kind === 'videoinput' && device.deviceId) {
-              inputs.videos.push({
-                label: device.label || 'camera-' + inputs.videos.length,
-                deviceId: device.deviceId,
-                kind: device.kind
-              });
+            for (var i = 0; i < devices.length; i++) {
+              var device = devices[i]; // console.log('device', device.deviceId);
+
+              if (device.kind === 'videoinput' && device.deviceId) {
+                inputs.videos.push({
+                  label: device.label || 'camera-' + inputs.videos.length,
+                  deviceId: device.deviceId,
+                  kind: device.kind
+                });
+              }
+
+              if (device.kind === 'audioinput' && device.deviceId) {
+                inputs.audios.push({
+                  label: device.label || 'microphone-' + inputs.videos.length,
+                  deviceId: device.deviceId,
+                  kind: device.kind
+                });
+              }
             }
 
-            if (device.kind === 'audioinput' && device.deviceId) {
-              inputs.audios.push({
-                label: device.label || 'microphone-' + inputs.videos.length,
-                deviceId: device.deviceId,
-                kind: device.kind
-              });
+            if (inputs.videos.length > 0 || inputs.audios.length > 0) {
+              resolve(inputs);
+            } else {
+              reject(inputs);
             }
-          }
-
-          if (inputs.videos.length > 0 || inputs.audios.length > 0) {
-            resolve(inputs);
-          } else {
-            reject(inputs);
-          }
+          });
         });
       }));
     };
 
-    _proto.connect$ = function connect$() {
+    _proto.connect$ = function connect$(preferences) {
       var _this2 = this;
 
+      var devices = this.state.devices;
+
+      if (preferences) {
+        devices.video = preferences.video;
+        devices.audio = preferences.audio;
+      } // console.log('AgoraService.connect$', preferences, devices);
+
+
       this.patchState({
-        connecting: true
+        connecting: true,
+        devices: devices
       });
       this.createClient(function () {
         _this2.getRtcToken().subscribe(function (token) {
@@ -582,10 +762,15 @@
         // console.log('AgoraRTC client init failed', error);
         _this3.client = null;
       });
-      client.on('stream-published', this.onStreamPublished); //subscribe remote stream
+      client.on('stream-published', this.onStreamPublished);
+      client.on('stream-unpublished', this.onStreamUnpublished); //subscribe remote stream
 
       client.on('stream-added', this.onStreamAdded);
       client.on('stream-subscribed', this.onStreamSubscribed);
+      client.on('mute-video', this.onMuteVideo);
+      client.on('unmute-video', this.onUnmuteVideo);
+      client.on('mute-audio', this.onMuteAudio);
+      client.on('unmute-audio', this.onUnmuteAudio);
       client.on('error', this.onError); // Occurs when the peer user leaves the channel; for example, the peer user calls Client.leave.
 
       client.on('peer-leave', this.onPeerLeaved);
@@ -612,8 +797,7 @@
       token = null; // !!!
 
       client.join(token, environment.channelName, clientUID, function (uid) {
-        console.log('AgoraService.joinChannel', uid);
-
+        // console.log('AgoraService.joinChannel', uid);
         _this4.patchState({
           connected: true,
           uid: uid
@@ -628,19 +812,9 @@
           });
         }
 
-        {
-          _this4.state.devices.video = _this4.state.devices.videos[0] || null;
-          _this4.state.devices.audio = _this4.state.devices.audios[0] || null;
-          /*
-          const cameraId = devices.videos.length ? devices.videos[0].deviceId : null;
-          const microphoneId = devices.audios.length ? devices.audios[0].deviceId : null;
-          this.createLocalStream(uid, microphoneId, cameraId);
-          */
-        }
-
         _this4.createMediaStream(uid, _this4.state.devices.video, _this4.state.devices.audio);
       }, function (error) {
-        console.log('Join channel failed', error);
+        console.log('AgoraService.joinChannel.error', error);
       }); // https://console.agora.io/invite?sign=YXBwSWQlM0RhYjQyODlhNDZjZDM0ZGE2YTYxZmQ4ZDY2Nzc0YjY1ZiUyNm5hbWUlM0RaYW1wZXR0aSUyNnRpbWVzdGFtcCUzRDE1ODY5NjM0NDU=// join link expire in 30 minutes
     };
 
@@ -729,11 +903,11 @@
             hls.on(Hls.Events.MEDIA_ATTACHED, function () {
               hls.loadSource(video.src);
               hls.on(Hls.Events.MANIFEST_PARSED, function (event, data) {
-                console.log('HlsDirective', data.levels);
+                // console.log('HlsDirective', data.levels);
                 element.play().then(function (success) {
                   var stream = element.captureStream();
-                  options.videoSource = stream.getVideoTracks()[0];
-                  console.log('AgoraService.getVideoStream', element, stream, stream.getVideoTracks());
+                  options.videoSource = stream.getVideoTracks()[0]; // console.log('AgoraService.getVideoStream', element, stream, stream.getVideoTracks());
+
                   resolve(options);
                 }, function (error) {
                   console.log('AgoraService.getVideoStream.error', error);
@@ -747,8 +921,8 @@
 
             var stream = _element.captureStream();
 
-            options.videoSource = stream.getVideoTracks()[0];
-            console.log('getVideoStream', _element, stream, stream.getVideoTracks());
+            options.videoSource = stream.getVideoTracks()[0]; // console.log('getVideoStream', element, stream, stream.getVideoTracks());
+
             resolve(options); // };
 
             /*
@@ -783,15 +957,15 @@
             hls.on(Hls.Events.MEDIA_ATTACHED, function () {
               hls.loadSource(audio.src);
               hls.on(Hls.Events.MANIFEST_PARSED, function (event, data) {
-                console.log('HlsDirective', data.levels);
+                // console.log('HlsDirective', data.levels);
                 hls.loadLevel = data.levels.length - 1;
                 element.play().then(function (success) {
                   var stream = element.captureStream();
-                  options.audioSource = stream.getAudioTracks()[0];
-                  console.log('AgoraService.getAudioStream', element, stream, stream.getAudioTracks());
+                  options.audioSource = stream.getAudioTracks()[0]; // console.log('AgoraService.getAudioStream', element, stream, stream.getAudioTracks());
+
                   resolve(options);
                 }, function (error) {
-                  console.log('AgoraService.getVideoStream.error', error);
+                  console.log('AgoraService.getAudioStream.error', error);
                 });
               });
             });
@@ -802,8 +976,8 @@
 
             var stream = _element2.captureStream();
 
-            options.audioSource = stream.getAudioTracks()[0];
-            console.log('AgoraService.getAudioStream', _element2, stream, stream.getAudioTracks());
+            options.audioSource = stream.getAudioTracks()[0]; // console.log('AgoraService.getAudioStream', element, stream, stream.getAudioTracks());
+
             resolve(options); // };
 
             /*
@@ -837,18 +1011,11 @@
         screen: false
       };
       Promise.all([this.getVideoStream(options, video), this.getAudioStream(options, audio)]).then(function (success) {
-        console.log('AgoraService.createMediaStream', uid, options);
+        // console.log('AgoraService.createMediaStream', uid, options);
         var local = _this7.local = AgoraRTC.createStream(options);
+        var quality = Object.assign({}, _this7.state.quality); // console.log('AgoraService.setVideoEncoderConfiguration', quality);
 
-        if (_this7.state.role === RoleType.Publisher) {
-          var quality = {
-            resolution: _this7.state.quality.resolution,
-            frameRate: _this7.state.quality.frameRate,
-            bitrate: _this7.state.quality.bitrate
-          };
-          console.log('AgoraService.setVideoEncoderConfiguration', quality);
-          local.setVideoEncoderConfiguration(quality);
-        }
+        local.setVideoEncoderConfiguration(quality);
 
         _this7.initLocalStream(options);
       });
@@ -857,30 +1024,9 @@
     _proto.initLocalStream = function initLocalStream(options) {
       var _this8 = this;
 
-      var client = this.client;
       var local = this.local;
       local.init(function () {
-        var id = local.getId();
-        console.log('AgoraService.initLocalStream', id);
-        var video = document.querySelector('.video--local');
-
-        if (video) {
-          video.setAttribute('id', 'agora_local_' + id);
-          video.classList.add('playing'); // setTimeout(() => {
-
-          local.play('agora_local_' + id, function (error) {
-            if (error) {
-              console.log('AgoraService.initLocalStream.play.error', error);
-            } else {
-              _this8.patchState({
-                local: id,
-                localStream: local
-              });
-
-              _this8.publishLocalStream();
-            }
-          }); // }, 100);
-        }
+        _this8.publishLocalStream();
       }, function (error) {
         console.log('AgoraService.initLocalStream.init.error', error);
       });
@@ -917,19 +1063,25 @@
 
     _proto.publishLocalStream = function publishLocalStream() {
       var client = this.client;
-      var local = this.local; //publish local stream
+      var local = this.local; // publish local stream
 
       client.publish(local, function (error) {
-        console.log('AgoraService.publishLocalStream.error', error, local.getId());
+        console.log('AgoraService.publishLocalStream.error', local.getId(), error);
       });
+      this.local$.next(local);
     };
 
     _proto.unpublishLocalStream = function unpublishLocalStream() {
       var client = this.client;
       var local = this.local;
-      client.unpublish(local, function (error) {
-        console.log('unpublish failed');
-      });
+
+      if (local) {
+        client.unpublish(local, function (error) {
+          console.log('AgoraService.unpublishLocalStream.error', local.getId(), error);
+        });
+      }
+
+      this.local$.next(null);
     };
 
     _proto.leaveChannel = function leaveChannel() {
@@ -938,6 +1090,7 @@
       this.patchState({
         connecting: false
       });
+      this.unpublishLocalStream();
       var client = this.client;
       client.leave(function () {
         // console.log('Leave channel successfully');
@@ -950,7 +1103,7 @@
         messageChannel.leave();
         messageClient.logout();
       }, function (error) {
-        console.log('Leave channel failed');
+        console.log('AgoraService.leaveChannel.error', error);
       });
     };
 
@@ -963,11 +1116,17 @@
           this.patchState({
             cameraMuted: false
           });
+          this.events$.next(new AgoraUnmuteVideoEvent({
+            streamId: local.getId()
+          }));
         } else {
           local.muteVideo();
           this.patchState({
             cameraMuted: true
           });
+          this.events$.next(new AgoraMuteVideoEvent({
+            streamId: local.getId()
+          }));
         }
       }
     };
@@ -981,11 +1140,17 @@
           this.patchState({
             audioMuted: false
           });
+          this.events$.next(new AgoraUnmuteAudioEvent({
+            streamId: local.getId()
+          }));
         } else {
           local.muteAudio();
           this.patchState({
             audioMuted: true
           });
+          this.events$.next(new AgoraMuteAudioEvent({
+            streamId: local.getId()
+          }));
         }
       }
     };
@@ -1095,17 +1260,6 @@
         }).then(function (message) {
           // console.log('AgoraService.sendRemoteControlRequest return', message);
           if (message.type === MessageType.RequestControlAccepted) {
-            /*
-            this.remoteDeviceInfo = message.payload;
-            if (this.playerElement) {
-            this.remoteStream.play(this.playerElement.id, { fit: 'contain', muted: true });
-            this.controlMouse()
-            resolve(true);
-            return;
-            } else {
-            reject('request not accepted');
-            }
-            */
             resolve(true);
           } else if (message.type === MessageType.RequestControlRejected) {
             // this.remoteDeviceInfo = undefined
@@ -1153,7 +1307,7 @@
     ;
 
     _proto.onError = function onError(error) {
-      console.log('Agora', error);
+      console.log('AgoraService.onError', error);
     };
 
     _proto.onMessage = function onMessage(data, uid) {
@@ -1190,94 +1344,104 @@
     };
 
     _proto.onStreamPublished = function onStreamPublished(event) {
-      console.log('Publish local stream successfully');
+      console.log('AgoraService.onStreamPublished');
+      this.local$.next(this.local);
+    };
+
+    _proto.onStreamUnpublished = function onStreamUnpublished(event) {
+      console.log('AgoraService.onStreamUnpublished');
+      this.local$.next(null);
     };
 
     _proto.onStreamAdded = function onStreamAdded(event) {
       var client = this.client;
       var stream = event.stream;
       var id = stream.getId();
-      console.log('New stream added: ' + id);
 
       if (id !== this.state.uid) {
         client.subscribe(stream, function (error) {
-          console.log('stream subscribe failed', error);
+          console.log('AgoraService.onStreamAdded.subscribe.error', error);
         });
+      }
+    };
+
+    _proto.onStreamRemoved = function onStreamRemoved(event) {
+      var stream = event.stream;
+      var id = stream.getId();
+      console.log('AgoraService.onStreamRemoved', id, this.state.uid);
+
+      if (id !== this.state.uid) {
+        this.remoteRemove(id);
       }
     };
 
     _proto.onStreamSubscribed = function onStreamSubscribed(event) {
-      var stream = event.stream;
-      var id = stream.getId();
-      var element = document.querySelector('.video--remote');
-
-      if (element) {
-        element.setAttribute('id', 'agora_remote_' + id);
-        element.classList.add('playing');
-      }
-
-      this.patchState({
-        remote: id,
-        remoteStream: stream
-      }); // console.log('element', element);
-
-      stream.play('agora_remote_' + id);
-      console.log('AgoraService.onStreamSubscribed', id);
-
-      if (element) {
-        this.events$.next(new AgoraRemoteEvent({
-          stream: stream,
-          element: element
-        }));
-      }
-    } // Occurs when the remote stream is removed; for example, a peer user calls Client.unpublish.
-    ;
-
-    _proto.onStreamRemoved = function onStreamRemoved(event) {
-      var stream = event.stream;
-      var id = stream.getId(); // console.log('stream-removed remote-uid: ', id);
-
-      if (id !== this.state.uid) {
-        stream.stop('agora_remote_' + id);
-        var video = document.querySelector('.video--remote');
-
-        if (video) {
-          video.classList.remove('playing');
-          video.textContent = '';
-        }
-      }
-
-      this.patchState({
-        remote: null,
-        remoteStream: null
-      }); // console.log('stream-removed remote-uid: ', id);
+      this.remoteAdd(event.stream);
     };
 
     _proto.onPeerLeaved = function onPeerLeaved(event) {
-      var id = event.uid; // console.log('peer-leave id', id);
+      var id = event.uid;
 
       if (id !== this.state.uid) {
-        var video = document.querySelector('.video--remote');
-
-        if (video) {
-          video.classList.remove('playing');
-          video.textContent = '';
-        }
-
-        this.patchState({
-          remote: null,
-          remoteStream: null,
-          locked: false,
-          control: false
-        });
-      } else {
-        this.patchState({
-          local: null,
-          localStream: null,
-          locked: false,
-          control: false
-        });
+        this.remoteRemove(id);
       }
+
+      this.patchState({
+        locked: false,
+        control: false
+      });
+    };
+
+    _proto.remoteAdd = function remoteAdd(stream) {
+      console.log('AgoraService.remoteAdd', stream);
+      var remotes = this.remotes$.getValue();
+      remotes.push(stream);
+      this.remotes$.next(remotes);
+      this.events$.next(new AgoraRemoteEvent({
+        stream: stream
+      }));
+    };
+
+    _proto.remoteRemove = function remoteRemove(streamId) {
+      console.log('AgoraService.remoteRemove', streamId);
+      var remotes = this.remotes$.getValue();
+      var remote = remotes.find(function (x) {
+        return x.getId() === streamId;
+      });
+
+      if (remote) {
+        remote.stop();
+        remotes.splice(remotes.indexOf(remote), 1);
+        this.remotes$.next(remotes);
+      }
+    };
+
+    _proto.onMuteVideo = function onMuteVideo(event) {
+      console.log('AgoraService.onMuteVideo', event);
+      this.events$.next(new AgoraMuteVideoEvent({
+        streamId: event.uid
+      }));
+    };
+
+    _proto.onUnmuteVideo = function onUnmuteVideo(event) {
+      console.log('AgoraService.onUnmuteVideo', event);
+      this.events$.next(new AgoraUnmuteVideoEvent({
+        streamId: event.uid
+      }));
+    };
+
+    _proto.onMuteAudio = function onMuteAudio(event) {
+      console.log('AgoraService.onMuteAudio', event);
+      this.events$.next(new AgoraMuteAudioEvent({
+        streamId: event.uid
+      }));
+    };
+
+    _proto.onUnmuteAudio = function onUnmuteAudio(event) {
+      console.log('AgoraService.onUnmuteAudio', event);
+      this.events$.next(new AgoraUnmuteAudioEvent({
+        streamId: event.uid
+      }));
     };
 
     _proto.onConnectionStateChange = function onConnectionStateChange(event) {
@@ -1287,20 +1451,249 @@
     _proto.onTokenPrivilegeWillExpire = function onTokenPrivilegeWillExpire(event) {
       // After requesting a new token
       // client.renewToken(token);
-      console.log('onTokenPrivilegeWillExpire');
+      console.log('AgoraService.onTokenPrivilegeWillExpire');
     };
 
     _proto.onTokenPrivilegeDidExpire = function onTokenPrivilegeDidExpire(event) {
       // After requesting a new token
       // client.renewToken(token);
-      console.log('onTokenPrivilegeDidExpire');
+      console.log('AgoraService.onTokenPrivilegeDidExpire');
     };
 
     return AgoraService;
   }(Emittable);
 
+  var AgoraDeviceComponent = /*#__PURE__*/function (_Component) {
+    _inheritsLoose(AgoraDeviceComponent, _Component);
+
+    function AgoraDeviceComponent() {
+      return _Component.apply(this, arguments) || this;
+    }
+
+    var _proto = AgoraDeviceComponent.prototype;
+
+    _proto.onInit = function onInit() {
+      var _this = this;
+
+      this.state = {};
+      this.devices = [];
+      this.stream = null;
+      this.form = null;
+      var agora = this.agora = AgoraService.getSingleton();
+      agora.state$.pipe(operators.takeUntil(this.unsubscribe$)).subscribe(function (state) {
+        // console.log('AgoraDeviceComponent.state', state);
+        _this.state = state;
+
+        _this.pushChanges();
+      });
+      agora.devices$().subscribe(function (devices) {
+        // console.log(devices);
+        _this.devices = devices;
+
+        _this.initForm(devices);
+
+        _this.pushChanges(); // agora.patchState({ devices, mediaStatus: (devices.videos.length || devices.audios.length) ? MediaStatus.Ready : MediaStatus.Unavalable });
+
+      });
+      /*
+      agora.checkMediaDevices$().pipe(
+      	first(),
+      ).subscribe(stream => console.log(stream));
+      */
+    };
+
+    _proto.initForm = function initForm(devices) {
+      var _this2 = this;
+
+      var form = this.form = new rxcompForm.FormGroup({
+        video: new rxcompForm.FormControl(null, rxcompForm.Validators.RequiredValidator()),
+        audio: new rxcompForm.FormControl(null, rxcompForm.Validators.RequiredValidator())
+      });
+      var controls = this.controls = form.controls;
+      controls.video.options = devices.videos.map(function (x) {
+        return {
+          id: x.deviceId,
+          name: x.label
+        };
+      });
+      controls.audio.options = devices.audios.map(function (x) {
+        return {
+          id: x.deviceId,
+          name: x.label
+        };
+      });
+      form.changes$.pipe(operators.takeUntil(this.unsubscribe$)).subscribe(function (changes) {
+        // console.log('AgoraDeviceComponent.changes$', form.value);
+        _this2.pushChanges();
+      });
+    };
+
+    _proto.availableVideos = function availableVideos() {
+      return this.state.devices ? this.state.devices.videos : [];
+    };
+
+    _proto.availableAudios = function availableAudios() {
+      return this.state.devices ? this.state.devices.audios : [];
+    };
+
+    _proto.onStream = function onStream(stream) {
+      this.stream = stream;
+    };
+
+    _proto.onEnter = function onEnter(event) {
+      var preferences = this.form.value;
+      var devices = this.devices;
+      devices.video = devices.videos.find(function (x) {
+        return x.deviceId === preferences.video;
+      });
+      devices.audio = devices.audios.find(function (x) {
+        return x.deviceId === preferences.audio;
+      });
+      this.enter.next(devices);
+    } // onView() { const context = getContext(this); }
+    // onChanges() {}
+    // onDestroy() {}
+    ;
+
+    return AgoraDeviceComponent;
+  }(rxcomp.Component);
+  AgoraDeviceComponent.meta = {
+    selector: '[agora-device]',
+    outputs: ['enter']
+  };
+
+  var AgoraStreamComponent = /*#__PURE__*/function (_Component) {
+    _inheritsLoose(AgoraStreamComponent, _Component);
+
+    function AgoraStreamComponent() {
+      return _Component.apply(this, arguments) || this;
+    }
+
+    var _proto = AgoraStreamComponent.prototype;
+
+    _proto.onInit = function onInit() {
+      var _this = this;
+
+      this.videoMuted = false;
+      this.audioMuted = false;
+      this.shouldUseResumeGesture = false;
+      var agora = this.agora = AgoraService.getSingleton();
+      agora.events$.pipe(operators.takeUntil(this.unsubscribe$)).subscribe(function (event) {
+        console.log('AgoraStreamEvent', event, _this.streamId);
+
+        if (_this.streamId && event.streamId === _this.streamId) {
+          if (event instanceof AgoraMuteVideoEvent) {
+            _this.videoMuted = true;
+          }
+
+          if (event instanceof AgoraUnmuteVideoEvent) {
+            _this.videoMuted = false;
+          }
+
+          if (event instanceof AgoraMuteAudioEvent) {
+            _this.audioMuted = true;
+          }
+
+          if (event instanceof AgoraUnmuteAudioEvent) {
+            _this.audioMuted = false;
+          }
+        }
+      });
+    } // onView() { const context = getContext(this); }
+    // onChanges() {}
+    // onDestroy() {}
+    ;
+
+    _createClass(AgoraStreamComponent, [{
+      key: "videoMuted",
+      set: function set(videoMuted) {
+        if (this.videoMuted_ !== videoMuted) {
+          this.videoMuted_ = videoMuted;
+
+          var _getContext = rxcomp.getContext(this),
+              node = _getContext.node;
+
+          videoMuted ? node.classList.add('video--muted') : node.classList.remove('video--muted');
+        }
+      }
+    }, {
+      key: "audioMuted",
+      set: function set(audioMuted) {
+        if (this.audioMuted_ !== audioMuted) {
+          this.audioMuted_ = audioMuted;
+
+          var _getContext2 = rxcomp.getContext(this),
+              node = _getContext2.node;
+
+          audioMuted ? node.classList.add('audio--muted') : node.classList.remove('audio--muted');
+        }
+      }
+    }, {
+      key: "streamId",
+      get: function get() {
+        return this.streamId_;
+      },
+      set: function set(streamId) {
+        this.streamId_ = streamId;
+      }
+    }, {
+      key: "stream",
+      set: function set(stream) {
+        var _this2 = this;
+
+        if (this.stream_ !== stream) {
+          var _getContext3 = rxcomp.getContext(this),
+              node = _getContext3.node;
+
+          var player = this.player = node.querySelector('.agora-stream__player');
+          player.textContent = '';
+          this.shouldUseResumeGesture = false;
+          /*
+          // !!! stop in AgoraService
+          if (this.stream_) {
+          	this.stream_.stop();
+          }
+          */
+
+          this.stream_ = stream;
+
+          if (stream) {
+            this.videoMuted = stream.userMuteVideo;
+            this.audioMuted = stream.userMuteAudio;
+          }
+
+          var id = stream ? stream.getId() : null;
+          this.streamId = id;
+
+          if (id) {
+            var name = "agora-stream-" + id;
+            player.setAttribute('id', name);
+            stream.play(name, {
+              fit: 'cover'
+            }, function (error) {
+              if (error && error.status !== 'aborted') {
+                // The playback fails, probably due to browser policy. You can resume the playback by user gesture.
+                _this2.shouldUseResumeGesture = true;
+
+                _this2.pushChanges();
+              }
+            }); // stream will be played in the element with the ID agora_remote
+          } else {
+            player.removeAttribute('id');
+          }
+        }
+      }
+    }]);
+
+    return AgoraStreamComponent;
+  }(rxcomp.Component);
+  AgoraStreamComponent.meta = {
+    selector: '[agora-stream]',
+    inputs: ['stream']
+  };
+
   var BASE_HREF = document.querySelector('base').getAttribute('href');
-  var DEBUG = false;
+  var DEBUG = true;
 
   var ModalEvent = function ModalEvent(data) {
     this.data = data;
@@ -1528,104 +1921,56 @@
           node = _getContext.node;
 
       node.classList.remove('hidden');
+      this.state = {};
       this.view = null;
       this.form = null;
+      this.local = null;
+      this.remotes = [];
       var vrService = this.vrService = VRService.getService();
       vrService.status$.pipe(operators.takeUntil(this.unsubscribe$)).subscribe(function (status) {
         return _this.pushChanges();
       });
+      this.load$().pipe(operators.first()).subscribe(function (data) {
+        _this.data = data;
 
-      {
-        var agora = this.agora = AgoraService.getSingleton();
-        agora.message$.pipe(operators.takeUntil(this.unsubscribe$)).subscribe(function (message) {
-          console.log('AppComponent.message', message);
+        _this.init();
 
-          switch (message.type) {
-            case MessageType.RequestControl:
-              _this.onRemoteControlRequest(message);
-
-              break;
-
-            case MessageType.RequestControlAccepted:
-              agora.sendMessage({
-                type: MessageType.NavToView,
-                viewId: _this.view.id
-              });
-              break;
-
-            case MessageType.RequestInfoResult:
-              if (_this.controls.view.value !== message.viewId) {
-                _this.controls.view.value = message.viewId;
-                console.log('AppComponent.RequestInfoResult', message.viewId);
-              }
-
-              break;
-
-            case MessageType.NavToView:
-              if ((agora.state.locked || agora.state.spying) && message.viewId) {
-                if (_this.controls.view.value !== message.viewId) {
-                  _this.controls.view.value = message.viewId;
-                  console.log('AppComponent.NavToView', message.viewId);
-                }
-              }
-
-              break;
-          }
-        });
-        agora.state$.pipe(operators.takeUntil(this.unsubscribe$)).subscribe(function (state) {
-          console.log('AppComponent.state', state);
-          _this.state = state;
-
-          _this.pushChanges();
-        });
-        agora.devices$().subscribe(function (devices) {
-          agora.patchState({
-            devices: devices,
-            mediaStatus: devices.videos.length || devices.audios.length ? MediaStatus.Ready : MediaStatus.Unavalable
-          });
-        });
-        this.checkCamera();
-      }
-
-      this.loadData();
+        _this.initForm();
+      });
     };
 
-    _proto.checkCamera = function checkCamera() {
-      var _this2 = this;
-
-      if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
-        navigator.mediaDevices.getUserMedia({
-          video: true,
-          audio: true
-        }).then(function (stream) {
-          console.log('stream', stream);
-
-          _this2.agora.patchState({
-            mediaStatus: MediaStatus.Ready
-          });
-        }).catch(function (error) {
-          console.log('media error', error);
-        });
-      }
-    };
-
-    _proto.loadData = function loadData() {
-      var _this3 = this;
-
-      HttpService.get$('./api/data.json').pipe(operators.first()).subscribe(function (data) {
+    _proto.load$ = function load$() {
+      return HttpService.get$('./api/data.json').pipe(operators.map(function (data) {
         data.views.forEach(function (view) {
           view.items.forEach(function (item, index) {
             item.index = index;
           });
         });
-        _this3.data = data;
+        return data;
+      }));
+    };
 
-        _this3.initForm();
-      });
+    _proto.init = function init() {
+
+      {
+        var role = LocationService.get('role') || RoleType.Attendee;
+        this.state = {
+          role: role,
+          connecting: false,
+          connected: true,
+          locked: false,
+          control: false,
+          cameraMuted: false,
+          audioMuted: false,
+          devices: [],
+          mediaStatus: MediaStatus.Ready,
+          quality: StreamQualities[StreamQualities.length - 1]
+        };
+      }
     };
 
     _proto.initForm = function initForm() {
-      var _this4 = this;
+      var _this3 = this;
 
       var data = this.data;
       var form = this.form = new rxcompForm.FormGroup({
@@ -1634,42 +1979,43 @@
       var controls = this.controls = form.controls;
       controls.view.options = data.views;
       form.changes$.pipe(operators.takeUntil(this.unsubscribe$)).subscribe(function (changes) {
-        console.log('form.changes$', changes, form.valid);
+        // console.log('form.changes$', changes, form.valid);
         var view = data.views.find(function (x) {
           return x.id === changes.view;
         });
-        _this4.view = null;
+        _this3.view = null;
 
-        _this4.pushChanges();
+        _this3.pushChanges();
 
         setTimeout(function () {
-          _this4.view = view;
+          _this3.view = view;
 
-          _this4.pushChanges(); // !!!
-
-
-          {
-            _this4.agora.navToView(view.id);
-          }
+          _this3.pushChanges(); // !!!
         }, 1);
       });
     };
 
-    _proto.connect = function connect() {
-      var _this5 = this;
+    _proto.onEnter = function onEnter(preferences) {
+      this.agora.patchState({
+        mediaEnabled: true
+      });
+      this.connect(preferences);
+    };
+
+    _proto.connect = function connect(preferences) {
+      var _this4 = this;
 
       if (!this.state.connecting) {
-        var quality = this.agora.state.role === RoleType.Attendee ? StreamQualities[StreamQualities.length - 1] : StreamQualities[1]; // HD 1920
-
+        // let quality = this.agora.state.role === RoleType.Attendee ? StreamQualities[StreamQualities.length - 1] : StreamQualities[1]; // HD 1920
+        // this.agora.patchState({ connecting: true, quality });
         this.agora.patchState({
-          connecting: true,
-          quality: quality
+          connecting: true
         });
         setTimeout(function () {
-          _this5.agora.connect$().pipe(operators.takeUntil(_this5.unsubscribe$)).subscribe(function (state) {
-            _this5.state = Object.assign(_this5.state, state);
+          _this4.agora.connect$(preferences).pipe(operators.takeUntil(_this4.unsubscribe$)).subscribe(function (state) {
+            _this4.state = Object.assign(_this4.state, state);
 
-            _this5.pushChanges();
+            _this4.pushChanges();
           });
         }, 1000);
       }
@@ -1677,17 +2023,14 @@
 
     _proto.disconnect = function disconnect() {
       {
-        this.agora.leaveChannel();
+        this.patchState({
+          connecting: false,
+          connected: false
+        });
       }
     };
 
     _proto.onSlideChange = function onSlideChange(index) {
-      {
-        this.agora.sendMessage({
-          type: MessageType.SlideChange,
-          index: index
-        });
-      }
     };
 
     _proto.onNavTo = function onNavTo(viewId) {
@@ -1697,7 +2040,7 @@
     };
 
     _proto.onRemoteControlRequest = function onRemoteControlRequest(message) {
-      var _this6 = this;
+      var _this5 = this;
 
       ModalService.open$({
         src: CONTROL_REQUEST,
@@ -1705,16 +2048,16 @@
       }).pipe(operators.takeUntil(this.unsubscribe$)).subscribe(function (event) {
         {
           if (event instanceof ModalResolveEvent) {
-            message.type = MessageType.RequestControlAccepted;
-            _this6.state.locked = true;
+            _this5.patchState({
+              control: true,
+              spying: false
+            });
           } else {
-            message.type = MessageType.RequestControlRejected;
-            _this6.state.locked = false;
+            _this5.patchState({
+              control: false,
+              spying: false
+            });
           }
-
-          _this6.agora.sendMessage(message);
-
-          _this6.pushChanges();
         }
       });
     } // onView() { const context = getContext(this); }
@@ -1724,31 +2067,41 @@
 
     _proto.patchState = function patchState(state) {
       this.state = Object.assign({}, this.state, state);
-      this.pushChanges();
-      console.log(this.state);
+      this.pushChanges(); // console.log(this.state);
     };
 
     _proto.toggleCamera = function toggleCamera() {
       {
-        this.agora.toggleCamera();
+        this.patchState({
+          cameraMuted: !this.state.cameraMuted
+        });
       }
     };
 
     _proto.toggleAudio = function toggleAudio() {
       {
-        this.agora.toggleAudio();
+        this.patchState({
+          audioMuted: !this.state.audioMuted
+        });
       }
     };
 
     _proto.toggleControl = function toggleControl() {
-      {
-        this.agora.toggleControl();
+      if (this.state.control) {
+        this.patchState({
+          control: false
+        });
+      } else {
+        this.onRemoteControlRequest({});
       }
     };
 
     _proto.toggleSpy = function toggleSpy() {
       {
-        this.agora.toggleSpy();
+        this.patchState({
+          spying: !this.state.spying,
+          control: false
+        });
       }
     };
 
@@ -2567,7 +2920,6 @@
     var _proto = SliderDirective.prototype;
 
     _proto.onInit = function onInit() {
-      var _this = this;
 
       var _getContext = rxcomp.getContext(this),
           node = _getContext.node;
@@ -2579,30 +2931,6 @@
       gsap.set(this.inner, {
         x: -100 * this.current + '%'
       });
-
-      {
-        var agora = AgoraService.getSingleton();
-        agora.message$.pipe(operators.takeUntil(this.unsubscribe$)).subscribe(function (message) {
-          switch (message.type) {
-            case MessageType.SlideChange:
-              // console.log(message);
-              if (agora.state.locked && message.index !== undefined && message.index) {
-                _this.navTo(message.index);
-              }
-
-              break;
-
-            case MessageType.RequestControlAccepted:
-              setTimeout(function () {
-                agora.sendMessage({
-                  type: MessageType.SlideChange,
-                  index: _this.current
-                });
-              }, 500);
-              break;
-          }
-        });
-      }
       /*
       this.slider$().pipe(
       	takeUntil(this.unsubscribe$),
@@ -2789,6 +3117,30 @@
   }(rxcomp.Component);
   TryInARComponent.meta = {
     selector: '[try-in-ar]'
+  };
+
+  var ValueDirective = /*#__PURE__*/function (_Directive) {
+    _inheritsLoose(ValueDirective, _Directive);
+
+    function ValueDirective() {
+      return _Directive.apply(this, arguments) || this;
+    }
+
+    var _proto = ValueDirective.prototype;
+
+    _proto.onChanges = function onChanges(changes) {
+      var _getContext = rxcomp.getContext(this),
+          node = _getContext.node;
+
+      node.value = this.value;
+      node.setAttribute('value', this.value);
+    };
+
+    return ValueDirective;
+  }(rxcomp.Directive);
+  ValueDirective.meta = {
+    selector: '[value]',
+    inputs: ['value']
   };
 
   var HlsDirective = /*#__PURE__*/function (_Directive) {
@@ -58357,13 +58709,10 @@
       this.onMouseWheel = this.onMouseWheel.bind(this); // this.controls.addEventListener('change', this.render); // use if there is no animation loop
 
       window.addEventListener('resize', this.resize, false);
+      document.addEventListener('wheel', this.onMouseWheel, false);
       document.addEventListener('mousemove', this.onMouseMove, false);
       this.container.addEventListener('mousedown', this.onMouseDown, false);
       this.container.addEventListener('mouseup', this.onMouseUp, false);
-      /*
-      document.addEventListener('wheel', this.onMouseWheel, false);
-      */
-
       var vrService = this.vrService = VRService.getService();
       vrService.session$.pipe(operators.takeUntil(this.unsubscribe$)).subscribe(function (session) {
         _this4.renderer.xr.setSession(session);
@@ -58375,6 +58724,12 @@
         }
       });
       this.orbit.observe$().pipe(operators.takeUntil(this.unsubscribe$)).subscribe(function (event) {
+        // this.render();
+        {
+          console.log(JSON.stringify({
+            orientation: _this4.orbit.getOrientation()
+          }));
+        }
 
         if (_this4.agora) {
           _this4.agora.sendMessage({
@@ -58383,59 +58738,6 @@
           });
         }
       });
-
-      {
-        var agora = this.agora = AgoraService.getSingleton();
-        agora.events$.pipe(operators.takeUntil(this.unsubscribe$)).subscribe(function (event) {
-          /*
-          if (event instanceof AgoraRemoteEvent) {
-          	setTimeout(() => {
-          		this.panorama.setVideo(event.element.querySelector('video'));
-          	}, 500);
-          }
-          */
-        });
-        agora.message$.pipe(operators.takeUntil(this.unsubscribe$)).subscribe(function (message) {
-          switch (message.type) {
-            case MessageType.RequestInfo:
-              message.type = MessageType.RequestInfoResult;
-              message.viewId = _this4.view.id;
-              message.orientation = _this4.orbit.getOrientation();
-              agora.sendMessage(message);
-              break;
-
-            case MessageType.RequestInfoResult:
-              if (message.viewId === _this4.view.id) {
-                _this4.orbit.setOrientation(message.orientation);
-              } else {
-                _this4.infoResultMessage = message;
-              }
-
-              break;
-
-            case MessageType.CameraOrientation:
-              if (agora.state.locked || agora.state.spying) {
-                _this4.orbit.setOrientation(message.orientation); // this.render();
-
-              }
-
-              break;
-
-            case MessageType.CameraRotate:
-              if (agora.state.locked || agora.state.spying) {
-                var camera = _this4.camera;
-                camera.position.set(message.coords[0], message.coords[1], message.coords[2]);
-                camera.lookAt(ORIGIN); // this.render();
-              }
-
-              break;
-          }
-        });
-        agora.state$.pipe(operators.takeUntil(this.unsubscribe$)).subscribe(function (state) {
-          _this4.state = state; // console.log(state);
-          // this.pushChanges();
-        });
-      }
     };
 
     _proto.removeListeners = function removeListeners() {
@@ -59080,7 +59382,7 @@
   }(rxcomp.Module);
   AppModule.meta = {
     imports: [rxcomp.CoreModule, rxcompForm.FormModule],
-    declarations: [ControlCustomSelectComponent, ControlRequestComponent, ControlTextComponent, DropDirective, DropdownDirective, DropdownItemDirective, HlsDirective, IdDirective, ModalComponent, ModalOutletComponent, ModelComponent, ModelGltfComponent, ModelPictureComponent, ModelTextComponent, ModelNavComponent, ModelPanelComponent, SliderDirective, TryInARComponent, WorldComponent],
+    declarations: [AgoraDeviceComponent, AgoraDevicePreviewComponent, AgoraStreamComponent, ControlCustomSelectComponent, ControlRequestComponent, ControlTextComponent, DropDirective, DropdownDirective, DropdownItemDirective, HlsDirective, IdDirective, ModalComponent, ModalOutletComponent, ModelComponent, ModelGltfComponent, ModelPictureComponent, ModelTextComponent, ModelNavComponent, ModelPanelComponent, SliderDirective, TryInARComponent, ValueDirective, WorldComponent],
     bootstrap: AppComponent
   };
 
