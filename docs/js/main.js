@@ -1693,7 +1693,7 @@
   };
 
   var BASE_HREF = document.querySelector('base').getAttribute('href');
-  var DEBUG = true;
+  var DEBUG = false;
 
   var ModalEvent = function ModalEvent(data) {
     this.data = data;
@@ -1951,21 +1951,60 @@
     };
 
     _proto.init = function init() {
+      var _this2 = this;
 
       {
-        var role = LocationService.get('role') || RoleType.Attendee;
-        this.state = {
-          role: role,
-          connecting: false,
-          connected: true,
-          locked: false,
-          control: false,
-          cameraMuted: false,
-          audioMuted: false,
-          devices: [],
-          mediaStatus: MediaStatus.Ready,
-          quality: StreamQualities[StreamQualities.length - 1]
-        };
+        var agora = this.agora = AgoraService.getSingleton();
+        agora.message$.pipe(operators.takeUntil(this.unsubscribe$)).subscribe(function (message) {
+          // console.log('AppComponent.message', message);
+          switch (message.type) {
+            case MessageType.RequestControl:
+              _this2.onRemoteControlRequest(message);
+
+              break;
+
+            case MessageType.RequestControlAccepted:
+              agora.sendMessage({
+                type: MessageType.NavToView,
+                viewId: _this2.view.id
+              });
+              break;
+
+            case MessageType.RequestInfoResult:
+              if (_this2.controls.view.value !== message.viewId) {
+                _this2.controls.view.value = message.viewId; // console.log('AppComponent.RequestInfoResult', message.viewId);
+              }
+
+              break;
+
+            case MessageType.NavToView:
+              if ((agora.state.locked || agora.state.spying) && message.viewId) {
+                if (_this2.controls.view.value !== message.viewId) {
+                  _this2.controls.view.value = message.viewId; // console.log('AppComponent.NavToView', message.viewId);
+                }
+              }
+
+              break;
+          }
+        });
+        agora.state$.pipe(operators.takeUntil(this.unsubscribe$)).subscribe(function (state) {
+          // console.log('AppComponent.state', state);
+          _this2.state = state;
+
+          _this2.pushChanges();
+        });
+        agora.local$.pipe(operators.takeUntil(this.unsubscribe$)).subscribe(function (local) {
+          console.log('AppComponent.local', local);
+          _this2.local = local;
+
+          _this2.pushChanges();
+        });
+        agora.remotes$.pipe(operators.takeUntil(this.unsubscribe$)).subscribe(function (remotes) {
+          console.log('AppComponent.remotes', remotes);
+          _this2.remotes = remotes;
+
+          _this2.pushChanges();
+        });
       }
     };
 
@@ -1991,6 +2030,11 @@
           _this3.view = view;
 
           _this3.pushChanges(); // !!!
+
+
+          {
+            _this3.agora.navToView(view.id);
+          }
         }, 1);
       });
     };
@@ -2023,14 +2067,17 @@
 
     _proto.disconnect = function disconnect() {
       {
-        this.patchState({
-          connecting: false,
-          connected: false
-        });
+        this.agora.leaveChannel();
       }
     };
 
     _proto.onSlideChange = function onSlideChange(index) {
+      {
+        this.agora.sendMessage({
+          type: MessageType.SlideChange,
+          index: index
+        });
+      }
     };
 
     _proto.onNavTo = function onNavTo(viewId) {
@@ -2048,16 +2095,16 @@
       }).pipe(operators.takeUntil(this.unsubscribe$)).subscribe(function (event) {
         {
           if (event instanceof ModalResolveEvent) {
-            _this5.patchState({
-              control: true,
-              spying: false
-            });
+            message.type = MessageType.RequestControlAccepted;
+            _this5.state.locked = true;
           } else {
-            _this5.patchState({
-              control: false,
-              spying: false
-            });
+            message.type = MessageType.RequestControlRejected;
+            _this5.state.locked = false;
           }
+
+          _this5.agora.sendMessage(message);
+
+          _this5.pushChanges();
         }
       });
     } // onView() { const context = getContext(this); }
@@ -2072,36 +2119,25 @@
 
     _proto.toggleCamera = function toggleCamera() {
       {
-        this.patchState({
-          cameraMuted: !this.state.cameraMuted
-        });
+        this.agora.toggleCamera();
       }
     };
 
     _proto.toggleAudio = function toggleAudio() {
       {
-        this.patchState({
-          audioMuted: !this.state.audioMuted
-        });
+        this.agora.toggleAudio();
       }
     };
 
     _proto.toggleControl = function toggleControl() {
-      if (this.state.control) {
-        this.patchState({
-          control: false
-        });
-      } else {
-        this.onRemoteControlRequest({});
+      {
+        this.agora.toggleControl();
       }
     };
 
     _proto.toggleSpy = function toggleSpy() {
       {
-        this.patchState({
-          spying: !this.state.spying,
-          control: false
-        });
+        this.agora.toggleSpy();
       }
     };
 
@@ -2920,6 +2956,7 @@
     var _proto = SliderDirective.prototype;
 
     _proto.onInit = function onInit() {
+      var _this = this;
 
       var _getContext = rxcomp.getContext(this),
           node = _getContext.node;
@@ -2931,6 +2968,30 @@
       gsap.set(this.inner, {
         x: -100 * this.current + '%'
       });
+
+      {
+        var agora = AgoraService.getSingleton();
+        agora.message$.pipe(operators.takeUntil(this.unsubscribe$)).subscribe(function (message) {
+          switch (message.type) {
+            case MessageType.SlideChange:
+              // console.log(message);
+              if (agora.state.locked && message.index !== undefined && message.index) {
+                _this.navTo(message.index);
+              }
+
+              break;
+
+            case MessageType.RequestControlAccepted:
+              setTimeout(function () {
+                agora.sendMessage({
+                  type: MessageType.SlideChange,
+                  index: _this.current
+                });
+              }, 500);
+              break;
+          }
+        });
+      }
       /*
       this.slider$().pipe(
       	takeUntil(this.unsubscribe$),
@@ -58688,6 +58749,7 @@
     };
 
     _proto.onMouseWheel = function onMouseWheel(event) {
+      // !!! fov zoom
       try {
         var camera = this.camera;
         var fov = camera.fov + event.deltaY * 0.01;
@@ -58724,12 +58786,6 @@
         }
       });
       this.orbit.observe$().pipe(operators.takeUntil(this.unsubscribe$)).subscribe(function (event) {
-        // this.render();
-        {
-          console.log(JSON.stringify({
-            orientation: _this4.orbit.getOrientation()
-          }));
-        }
 
         if (_this4.agora) {
           _this4.agora.sendMessage({
@@ -58738,6 +58794,59 @@
           });
         }
       });
+
+      {
+        var agora = this.agora = AgoraService.getSingleton();
+        agora.events$.pipe(operators.takeUntil(this.unsubscribe$)).subscribe(function (event) {
+          /*
+          if (event instanceof AgoraRemoteEvent) {
+          	setTimeout(() => {
+          		this.panorama.setVideo(event.element.querySelector('video'));
+          	}, 500);
+          }
+          */
+        });
+        agora.message$.pipe(operators.takeUntil(this.unsubscribe$)).subscribe(function (message) {
+          switch (message.type) {
+            case MessageType.RequestInfo:
+              message.type = MessageType.RequestInfoResult;
+              message.viewId = _this4.view.id;
+              message.orientation = _this4.orbit.getOrientation();
+              agora.sendMessage(message);
+              break;
+
+            case MessageType.RequestInfoResult:
+              if (message.viewId === _this4.view.id) {
+                _this4.orbit.setOrientation(message.orientation);
+              } else {
+                _this4.infoResultMessage = message;
+              }
+
+              break;
+
+            case MessageType.CameraOrientation:
+              if (agora.state.locked || agora.state.spying) {
+                _this4.orbit.setOrientation(message.orientation); // this.render();
+
+              }
+
+              break;
+
+            case MessageType.CameraRotate:
+              if (agora.state.locked || agora.state.spying) {
+                var camera = _this4.camera;
+                camera.position.set(message.coords[0], message.coords[1], message.coords[2]);
+                camera.lookAt(ORIGIN); // this.render();
+              }
+
+              break;
+          }
+        });
+        agora.state$.pipe(operators.takeUntil(this.unsubscribe$)).subscribe(function (state) {
+          _this4.state = state; // console.log(state);
+          // this.pushChanges();
+        });
+      }
     };
 
     _proto.removeListeners = function removeListeners() {
