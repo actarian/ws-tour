@@ -21,7 +21,7 @@
     "agora-rtm-sdk": "~1.2.2",
     "body-parser": "~1.19.0",
     "events": "~3.1.0",
-    "express": "~4.17.1",
+    "express": "~4.17.3",
     "gsap": "~3.2.6",
     "hls.js": "^0.13.2",
     "html2canvas": "~1.0.0-rc.5",
